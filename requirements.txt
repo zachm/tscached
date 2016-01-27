@@ -1,0 +1,5 @@
+Flask==0.10.1
+PyYAML==3.11
+redis==2.10.5
+requests==2.9.1
+simplejson==3.8.1
