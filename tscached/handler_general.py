@@ -1,3 +1,4 @@
+import logging
 import os
 import simplejson as json
 import yaml
@@ -10,6 +11,16 @@ from tscached import app
 
 KAIROS_HOST = 'localhost'
 KAIROS_PORT = 8080
+
+
+if not app.debug:
+    logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
 
 @app.route('/', methods=['GET'])
 def handle_root():
@@ -31,4 +42,5 @@ def handle_query():
     else:
         query = request.args.get('query')
 
+    logging.warn('whatever!')
     return json.dumps(query_kairos(query))
