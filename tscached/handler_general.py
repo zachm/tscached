@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import simplejson as json
@@ -38,9 +39,16 @@ def query_kairos(query):
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
     if request.method == 'POST':
-        query = json.loads(request.data)
+        raw_query = request.data  # str
+        query = json.loads(raw_query)  # dict
     else:
-        query = request.args.get('query')
+        # TODO: We add an extra serialization. Maybe ok since we don't use GET much.
+        # TODO: We cast to str for consistent hashing... this is ungood.
+        raw_query = str(request.args.get('query'))
+        query = json.loads(raw_query)
 
     logging.warn('whatever!')
+    genHash = hashlib.sha224(raw_query).hexdigest()
+    logging.debug("generated hash: %s" % genHash)
+
     return json.dumps(query_kairos(query))
