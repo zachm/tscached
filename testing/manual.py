@@ -63,7 +63,6 @@ def query_with_post(url, query):
 
 
 def summarize_results(query, results):
-    results = query_with_post(url, SIMPLE_QUERY)
     assert results.keys() == ['queries']
 
     # because of input - one Q, one A
