@@ -90,10 +90,12 @@ def summarize_results(query, results):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Manual harness for querying/testing tscached/kairosdb')
-    parser.add_argument('-p', '--port', type=int, default=8080, help='port to query on, default 8080')
-    parser.add_argument('-s', '--server', type=str, default='localhost', help='hostname, default localhost')
+    parser = argparse.ArgumentParser(description='Harness for querying/testing tscached/kairosdb')
+    parser.add_argument('-p', '--port', type=int, default=8080, help='port to query on (8080)')
+    parser.add_argument('-s', '--server', type=str, default='localhost', help='hostname (localhost)')
     parser.add_argument('--verb', type=str, default='POST', help='GET or POST (default)')
+    parser.add_argument('--analysis', action='store_true', default=False,
+                        help='Run a summarize routine instead of barfing JSON.')
     args = parser.parse_args()
 
     url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
@@ -101,6 +103,8 @@ if __name__ == '__main__':
         results = query_with_post(url, SIMPLE_QUERY)
     else:
         results = query_with_get(url, SIMPLE_QUERY)
-    summarize_results(SIMPLE_QUERY, results)
 
-
+    if not args.analysis:
+        print json.dumps(results)
+    else:
+        summarize_results(SIMPLE_QUERY, results)
