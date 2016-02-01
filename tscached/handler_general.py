@@ -38,7 +38,7 @@ def query_kairos(query):
 
 
 def create_key(data, tipo):
-    """ data should be hashable (str, usually). tipo (ES, 'type') is str: 'mts' is used right now. """
+    """ data should be hashable (str, usually). tipo is str. """
     genHash = hashlib.sha224(data).hexdigest()
     key = "tscached:%s:%s" % (tipo, genHash)
     logging.debug("generated redis key: %s" % key)
@@ -104,21 +104,45 @@ def handle_query():
         raw_query = str(request.args.get('query'))
         query = json.loads(raw_query)
 
-    key = create_key(raw_query, 'mts')
     client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
-    redis_result = client.get(key)
 
-    if not redis_result:
-        logging.info('Redis   MISS: %s' % key)
+    kquery_hashable = json.dumps(query['metrics'])
+    kquery_key = create_key(kquery_hashable, 'kquery')
+    kquery_result = client.get(kquery_key)
+
+    if not kquery_result:
+        # Cold / Miss
+        logging.info('Redis MISS: %s' % kquery_key)
         kairos_result = query_kairos(query)
         json_result = json.dumps(kairos_result)
-        # TODO custom expiry (seconds)
-        # TODO does nx make sense? (only set if DNE)
-        res = client.set(key, raw_query, ex=3600, nx=True)
-        logging.info('Redis    SET: %s %s' % (res, key))
+
+        mts_keys = []
+
+        for result in kairos_result['queries']:
+            for mts in result['results']:
+                mts_key_dict = {}
+                mts_key_dict['tags'] = mts['tags']
+                mts_key_dict['group_by'] = mts['group_by']
+                mts_key_dict['name'] = mts['name']
+                mts_hashable = json.dumps(mts_key_dict)
+                mts_key = create_key(mts_hashable, 'mts')
+                mts_keys.append(mts_key)
+                # TODO fix ex nx (now 30s expiry)
+                mts_set_result = client.set(mts_key, mts, ex=30, nx=True)
+                if not mts_set_result:
+                    logging.error('Redis SET failed: %s %s' % (mts_set_result, mts_key))
+                else:
+                    logging.info('Redis SET: %s %s' % (mts_set_result, mts_key))
+
+        logging.debug('tscached MTS keys: %s' % ', '.join(mts_keys))
+
+        # TODO fix ex nx (now 30s expiry)
+        query['tscached_mts_keys'] = mts_keys
+        res = client.set(kquery_key, query, ex=30, nx=True)
+        logging.info('Redis SET: %s %s' % (res, kquery_key))
         return json_result
     else:
-        logging.info('Redis    HIT: %s' % key)
+        logging.info('Redis HIT: %s' % kquery_key)
         # TODO update protocol. Like, how to merge two kairos results?
 
 
