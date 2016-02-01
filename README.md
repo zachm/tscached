@@ -2,18 +2,19 @@
 
 tscached is a smart caching proxy, built with Redis, for time series data in the KairosDB format.
 
-Inspired by postcache (github.com/arussellsaw/postcache) - tscached goes one step further:
-A previously issued query will be reissued across only the elapsed time since its last execution.
-In brief, this is a read-through, append-optimized, nominally consistent time series cache.
+Inspired by [arussellsaw/postcache](https://github.com/arussellsaw/postcache) - tscached goes one
+step further: A previously issued query will be reissued across only the elapsed time since its
+last execution. In brief, this is a read-through, append-optimized, nominally consistent time
+series cache.
 
 Everything that follows is something of a fluid design document.
 
-## Cache data stores
+## Stored Data
 
 We're storing two types of data in Redis, now referred to as **KQuery** and **MTS**.
 
 ### KQuery
-- Key: a hash from the JSON dump of a given KairosDB query
+- Key: a hash from the JSON dump of a given KairosDB query.
 - One exception: its start/end time values are missing.
 - Value: JSON dump of the query, including ABSOLUTE timestamps matching it.
 - The timestamps in the value will be updated whenever we update its constituent MTS.
@@ -22,17 +23,17 @@ We're storing two types of data in Redis, now referred to as **KQuery** and **MT
 ### MTS (Metric Time Series)
 - Briefly, each Metric Time Series is a KairosDB **result** dict.
 - Given that one KairosDB query may return N time series results, this represents one of them.
-- Key: a subset hash: includes elements name, group_by, tags. create_mts_key(dict result).
+- Key: a subset hash: includes elements `name, group_by, tags`.
 - Value: the full contents of the result dict.
 
-## Algorithm outline
+## Algorithm Outline
 
 You have received a query intended for KairosDB. What to do?
 
 What we do depends on whether (and what) corresponding data exists in the KQuery Store.
 
 ### Cache MISS (cold)
-Unfortunately for the end user, tscached has never seen this exact query before.
+Unfortunately for the user, tscached has never seen this exact query before.
 
 To proceed:
 - Forward the entire query to Kairos.
@@ -50,13 +51,13 @@ To be a *hot* hit, three properties must be true:
 - KQuery data must have an end timestamp within 10s of NOW (configurable).
 
 To proceed:
-- Do **not** query Kairos at all - this is explicit flood control. :)
+- Do **not** query Kairos at all - this is explicit flood control!
 - Pull all listed MTS out of Redis.
 - For each MTS, trim any data older than the START.
 - Return the rebuilt result (ts fixing, etc.) without updating Redis.
 
 
-## Cache HIT (warm)
+### Cache HIT (warm)
 This is the key tscached advancement. Data that is already extant in Redis, but more
 than 10s old, is **appended to** instead of overwritten.
 
@@ -100,13 +101,13 @@ not bother reading from it now. In other words, despite handling the same *seman
 as before, tscached is effectively cold. TTL expiry may be useful for this case.
 
 ### Preemptive caching (Read-before)
-tscached is intended to minimize read load on KairosDB; the fact that it will make 
+tscached is intended to minimize read load on KairosDB; the fact that it will make
 dashboards built with Grafana, et al. much faster to load is a happy coincidence.
 
 This leads to a natural next step: if a finite number of dashboards are built in a Grafana
 installation, but then queried very rarely (i.e., only under emergency scenarios), why not
 provide *shadow load* on them all the time? This would, in effect, keep tscached current and
-result in a very high (hot( hit rate.
+result in a very high (hot) hit rate.
 
-It could be achieved with a daemon, or with cron jobs, or with various other scenarios.
+It could be achieved with a daemon, or with cron jobs, or with various other approaches.
 Stay tuned...
