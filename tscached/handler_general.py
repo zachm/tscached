@@ -10,6 +10,8 @@ import redis
 import requests
 
 from tscached import app
+from tscached.datacache import KQuery
+from tscached.datacache import MTS
 from tscached.utils import create_key
 from tscached.utils import query_kairos
 
@@ -90,45 +92,26 @@ def handle_query():
 
     logging.info('Query')
 
-    client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
+    redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
 
-    kquery_hashable = json.dumps(query['metrics'])
-    kquery_key = create_key(kquery_hashable, 'kquery')
-    kquery_result = client.get(kquery_key)
+    kquery = KQuery.from_request(raw_query, redis_client)
+    kquery_result = kquery.get_cached()
 
     if not kquery_result:
         # Cold / Miss
-        logging.info('Redis MISS: %s' % kquery_key)
-        kairos_result = query_kairos(query)
-        json_result = json.dumps(kairos_result)
-
-        mts_keys = []
+        kairos_result = kquery.query_backend_for_result()
 
         for result in kairos_result['queries']:
-            for mts in result['results']:
-                mts_key_dict = {}
-                mts_key_dict['tags'] = mts['tags']
-                mts_key_dict['group_by'] = mts['group_by']
-                mts_key_dict['name'] = mts['name']
-                mts_hashable = json.dumps(mts_key_dict)
-                mts_key = create_key(mts_hashable, 'mts')
-                mts_keys.append(mts_key)
-                # TODO fix ex nx (now 30s expiry)
-                mts_set_result = client.set(mts_key, mts, ex=30, nx=True)
-                if not mts_set_result:
-                    logging.error('Redis SET failed: %s %s' % (mts_set_result, mts_key))
-                else:
-                    logging.info('Redis SET: %s %s' % (mts_set_result, mts_key))
+            for result in result['results']:
 
-        logging.debug('tscached MTS keys: %s' % ', '.join(mts_keys))
+                mts = MTS.from_result(result, redis_client)
+                kquery.add_mts(mts)
+                mts.upsert()
+        kquery.upsert()
 
-        # TODO fix ex nx (now 30s expiry)
-        query['tscached_mts_keys'] = mts_keys
-        res = client.set(kquery_key, query, ex=30, nx=True)
-        logging.info('Redis SET: %s %s' % (res, kquery_key))
-        return json_result
+        return kquery.get_raw_backend_result()
     else:
-        logging.info('Redis HIT: %s' % kquery_key)
+        logging.info('Redis HIT: %s' % kquery.get_key())
         # TODO update protocol. Like, how to merge two kairos results?
 
 

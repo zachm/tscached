@@ -9,11 +9,14 @@ KAIROS_PORT=8080
 
 
 
-def query_kairos(query):
+def query_kairos(query, raw=False):
     """ do it. """
     url = 'http://%s:%s/api/v1/datapoints/query' % (KAIROS_HOST, KAIROS_PORT)
     r = requests.post(url, data=json.dumps(query))
-    return json.loads(r.text)
+    if raw:
+        return r.text
+    else:
+        return json.loads(r.text)
 
 
 def create_key(data, tipo):
