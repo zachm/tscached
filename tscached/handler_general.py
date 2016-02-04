@@ -10,9 +10,9 @@ import redis
 import requests
 
 from tscached import app
+from tscached.utils import create_key
+from tscached.utils import query_kairos
 
-KAIROS_HOST = 'localhost'
-KAIROS_PORT = 8080
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 
@@ -28,22 +28,6 @@ if not app.debug:
 @app.route('/', methods=['GET'])
 def handle_root():
     return "hello world!"
-
-
-def query_kairos(query):
-    """ do it. """
-    url = 'http://%s:%s/api/v1/datapoints/query' % (KAIROS_HOST, KAIROS_PORT)
-    r = requests.post(url, data=json.dumps(query))
-    return json.loads(r.text)
-
-
-def create_key(data, tipo):
-    """ data should be hashable (str, usually). tipo is str. """
-    genHash = hashlib.sha224(data).hexdigest()
-    key = "tscached:%s:%s" % (tipo, genHash)
-    logging.debug("generated redis key: %s" % key)
-    return key
-
 
 def series_equivalent(a, b):
     """ Given dicts from .queries[].results[].* - verify if they match one another.
@@ -104,6 +88,8 @@ def handle_query():
         raw_query = str(request.args.get('query'))
         query = json.loads(raw_query)
 
+    logging.info('Query')
+
     client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
 
     kquery_hashable = json.dumps(query['metrics'])
@@ -147,3 +133,4 @@ def handle_query():
 
 
     return json.dumps(query_kairos(query))
+
