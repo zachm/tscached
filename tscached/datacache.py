@@ -20,13 +20,13 @@ class DataCache(object):
         result = self.redis_client.get(self.get_key())
         if result:
             logging.info('Cache HIT: %s' % self.get_key())
-            return result
+            return json.loads(result)
         else:
             logging.info('Cache MISS: %s' % self.get_key())
             return False
 
     def set_cached(self, value):
-        result = self.redis_client.set(self.get_key(), value, ex=self.expiry)
+        result = self.redis_client.set(self.get_key(), json.dumps(value), ex=self.expiry)
         if not result:
             logging.error('Cache SET failed: %s %s' % (result, self.get_key()))
         else:
@@ -60,6 +60,13 @@ class MTS(DataCache):
         new = cls(redis_client)
         new.result = result
         return new
+
+    @classmethod
+    def from_cache(cls, redis_key, redis_client):
+        new = cls(redis_client)
+        new.redis_key = redis_key
+        return new
+
 
     def key_basis(self):
         mts_key_dict = {}
