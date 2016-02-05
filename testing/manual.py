@@ -7,7 +7,6 @@ import requests
 import simplejson as json
 
 
-
 """
     It's the start of something.
     Not actually automated testing, but a harness for comparing
@@ -18,30 +17,9 @@ import simplejson as json
 """
 
 
-
-SIMPLE_QUERY = {
-  "metrics": [
-    {
-      "tags": {},
-      "name": "ztm.HeapInuse",
-      "aggregators": [
-        {
-          "name": "sum",
-          "align_sampling": True,
-          "sampling": {
-            "value": "10",
-            "unit": "seconds"
-          }
-        }
-      ]
-    }
-  ],
-  "cache_time": 0,
-  "start_relative": {
-    "value": "1",
-    "unit": "hours"
-  }
-}
+def load_example_data(filepath):
+    with open(filepath, 'r') as f:
+        return json.loads(f.read())
 
 
 def prettyprint_ts(ts, micro=True):
@@ -96,15 +74,21 @@ if __name__ == '__main__':
     parser.add_argument('--verb', type=str, default='POST', help='GET or POST (default)')
     parser.add_argument('--analysis', action='store_true', default=False,
                         help='Run a summarize routine instead of barfing JSON.')
+    parser.add_argument('--request', type=str, default='example_data/simple_query_request.json',
+                        help='Use a different query, specify as JSON-formatted file.')
     args = parser.parse_args()
+
+    request = load_example_data(args.request)
+    request['start_relative'] = {'value': '1', 'unit': 'minutes'}
+
 
     url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
     if args.verb == 'POST':
-        results = query_with_post(url, SIMPLE_QUERY)
+        results = query_with_post(url, request)
     else:
-        results = query_with_get(url, SIMPLE_QUERY)
+        results = query_with_get(url, request)
 
     if not args.analysis:
         print json.dumps(results)
     else:
-        summarize_results(SIMPLE_QUERY, results)
+        summarize_results(request, request)
