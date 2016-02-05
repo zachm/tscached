@@ -1,0 +1,57 @@
+{
+  "queries": [
+    {
+      "sample_size": 26,
+      "results": [
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.Alloc",
+              "ztm.BuckHashSys",
+              "ztm.Frees",
+              "ztm.GCSys",
+              "ztm.HeapAlloc",
+              "ztm.HeapIdle",
+              "ztm.HeapInuse",
+              "ztm.HeapObjects",
+              "ztm.HeapReleased",
+              "ztm.HeapSys",
+              "ztm.LastGC",
+              "ztm.Lookups",
+              "ztm.MCacheInuse",
+              "ztm.MCacheSys",
+              "ztm.MSpanInuse",
+              "ztm.MSpanSys",
+              "ztm.Mallocs",
+              "ztm.NextGC",
+              "ztm.NumGC",
+              "ztm.NumGoroutine",
+              "ztm.OtherSys",
+              "ztm.PauseTotalNs",
+              "ztm.StackInuse",
+              "ztm.StackSys",
+              "ztm.Sys",
+              "ztm.TotalAlloc"
+            ]
+          },
+          "values": [
+            [
+              1454638320003,
+              156
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

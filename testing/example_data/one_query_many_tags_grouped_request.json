@@ -1,0 +1,31 @@
+{
+  "metrics": [
+    {
+      "tags": {},
+      "name": "kairosdb.metric_counters",
+      "group_by": [
+        {
+          "name": "tag",
+          "tags": [
+            "metric_name"
+          ]
+        }
+      ],
+      "aggregators": [
+        {
+          "name": "sum",
+          "align_sampling": true,
+          "sampling": {
+            "value": "10",
+            "unit": "seconds"
+          }
+        }
+      ]
+    }
+  ],
+  "cache_time": 0,
+  "start_relative": {
+    "value": "1",
+    "unit": "minutes"
+  }
+}

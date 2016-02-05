@@ -1,0 +1,64 @@
+{
+  "queries": [
+    {
+      "sample_size": 6,
+      "results": [
+        {
+          "name": "ztm.HeapInuse",
+          "group_by": [
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "collector": [
+              "Fullerite"
+            ],
+            "ecosystem": [
+              "devc"
+            ],
+            "habitat": [
+              "uswest1devc"
+            ],
+            "region": [
+              "uswest1-dev"
+            ],
+            "runtimeenv": [
+              "dev"
+            ],
+            "superregion": [
+              "norcal-dev"
+            ]
+          },
+          "values": [
+            [
+              1454637935000,
+              1900544
+            ],
+            [
+              1454637945000,
+              2039808
+            ],
+            [
+              1454637955000,
+              2113536
+            ],
+            [
+              1454637965000,
+              2170880
+            ],
+            [
+              1454637975000,
+              2211840
+            ],
+            [
+              1454637985000,
+              2318336
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

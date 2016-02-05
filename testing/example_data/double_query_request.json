@@ -1,0 +1,37 @@
+{
+  "metrics": [
+    {
+      "tags": {},
+      "name": "ztm.Alloc",
+      "aggregators": [
+        {
+          "name": "sum",
+          "align_sampling": true,
+          "sampling": {
+            "value": "10",
+            "unit": "seconds"
+          }
+        }
+      ]
+    },
+    {
+      "tags": {},
+      "name": "ztm.HeapSys",
+      "aggregators": [
+        {
+          "name": "sum",
+          "align_sampling": true,
+          "sampling": {
+            "value": "10",
+            "unit": "seconds"
+          }
+        }
+      ]
+    }
+  ],
+  "cache_time": 0,
+  "start_relative": {
+    "value": "1",
+    "unit": "hours"
+  }
+}

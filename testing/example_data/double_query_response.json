@@ -1,0 +1,124 @@
+{
+  "queries": [
+    {
+      "sample_size": 6,
+      "results": [
+        {
+          "name": "ztm.Alloc",
+          "group_by": [
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "collector": [
+              "Fullerite"
+            ],
+            "ecosystem": [
+              "devc"
+            ],
+            "habitat": [
+              "uswest1devc"
+            ],
+            "region": [
+              "uswest1-dev"
+            ],
+            "runtimeenv": [
+              "dev"
+            ],
+            "superregion": [
+              "norcal-dev"
+            ]
+          },
+          "values": [
+            [
+              1454637665000,
+              872928
+            ],
+            [
+              1454637675000,
+              1022080
+            ],
+            [
+              1454637685000,
+              1073448
+            ],
+            [
+              1454637695000,
+              1176400
+            ],
+            [
+              1454637705000,
+              1271872
+            ],
+            [
+              1454637715000,
+              1409600
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "sample_size": 6,
+      "results": [
+        {
+          "name": "ztm.HeapSys",
+          "group_by": [
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "collector": [
+              "Fullerite"
+            ],
+            "ecosystem": [
+              "devc"
+            ],
+            "habitat": [
+              "uswest1devc"
+            ],
+            "region": [
+              "uswest1-dev"
+            ],
+            "runtimeenv": [
+              "dev"
+            ],
+            "superregion": [
+              "norcal-dev"
+            ]
+          },
+          "values": [
+            [
+              1454637665000,
+              5472256
+            ],
+            [
+              1454637675000,
+              5439488
+            ],
+            [
+              1454637685000,
+              5472256
+            ],
+            [
+              1454637695000,
+              5472256
+            ],
+            [
+              1454637705000,
+              5472256
+            ],
+            [
+              1454637715000,
+              5472256
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

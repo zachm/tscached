@@ -1,0 +1,841 @@
+{
+  "queries": [
+    {
+      "sample_size": 26,
+      "results": [
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.Alloc"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.Alloc"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.BuckHashSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.BuckHashSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.Frees"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.Frees"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.GCSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.GCSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.HeapAlloc"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.HeapAlloc"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.HeapIdle"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.HeapIdle"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.HeapInuse"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.HeapInuse"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.HeapObjects"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.HeapObjects"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.HeapReleased"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.HeapReleased"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.HeapSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.HeapSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.LastGC"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.LastGC"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.Lookups"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.Lookups"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.MCacheInuse"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.MCacheInuse"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.MCacheSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.MCacheSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.MSpanInuse"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.MSpanInuse"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.MSpanSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.MSpanSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.Mallocs"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.Mallocs"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.NextGC"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.NextGC"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.NumGC"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.NumGC"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.NumGoroutine"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.NumGoroutine"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.OtherSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.OtherSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.PauseTotalNs"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.PauseTotalNs"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.StackInuse"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.StackInuse"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.StackSys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.StackSys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.Sys"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.Sys"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        },
+        {
+          "name": "kairosdb.metric_counters",
+          "group_by": [
+            {
+              "name": "tag",
+              "tags": [
+                "metric_name"
+              ],
+              "group": {
+                "metric_name": "ztm.TotalAlloc"
+              }
+            },
+            {
+              "name": "type",
+              "type": "number"
+            }
+          ],
+          "tags": {
+            "host": [
+              "140-sfoeng49-216.clients.corp.yelpcorp.com"
+            ],
+            "metric_name": [
+              "ztm.TotalAlloc"
+            ]
+          },
+          "values": [
+            [
+              1454638500001,
+              6
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}
