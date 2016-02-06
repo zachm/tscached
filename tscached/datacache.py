@@ -56,16 +56,20 @@ class MTS(DataCache):
         super(MTS, self).__init__(redis_client, 'mts')
 
     @classmethod
-    def from_result(cls, result, redis_client):
-        new = cls(redis_client)
-        new.result = result
-        return new
+    def from_result(cls, results, redis_client):
+        # includes everything except sample_size, which we'll recalculate later
+        for result in results['results']:
+            new = cls(redis_client)
+            new.result = result
+            yield new
 
     @classmethod
-    def from_cache(cls, redis_key, redis_client):
-        new = cls(redis_client)
-        new.redis_key = redis_key
-        return new
+    def from_cache(cls, redis_keys, redis_client):
+        for redis_key in redis_keys:
+            new = cls(redis_client)
+            new.redis_key = redis_key
+            new.result = new.get_cached()
+            yield new
 
 
     def key_basis(self):
@@ -83,7 +87,6 @@ class KQuery(DataCache):
 
     expiry = 10800  # three hours, matching Kairos
     raw_query = None
-    raw_result = None
     query = None
     related_mts = None
 
@@ -93,22 +96,38 @@ class KQuery(DataCache):
 
     @classmethod
     def from_request(cls, payload, redis_client):
-        new = cls(redis_client)
-        new.raw_query = str(payload)
-        new.query = json.loads(payload)
-        return new
+        """ Generator. HTTP query can create many KQueries.  """
+
+        query = json.loads(payload)
+        for metric in query.get('metrics', []):
+            new = cls(redis_client)
+            new.query = metric
+            new.time_range = cls.populate_time_range(query)
+            yield new
+
+    @staticmethod
+    def populate_time_range(request_dict):
+        """ KQueries need to know their needful time interval. """
+        relevant_keys = ['start_relative', 'end_relative', 'start_absolute', 'end_absolute']
+        time_range = {}
+        for key in relevant_keys:
+            if key in request_dict:
+                time_range[key] = request_dict[key]
+        return time_range
 
     def key_basis(self):
-        """ Hashing on 'metrics' implies removing all start/end timestamps. """
-        return self.query['metrics']
+        """ We already remove the timestamps and store them separately. """
+        return self.query
 
-    def query_backend_for_result(self):
-        self.raw_result = query_kairos(self.query, raw=True)
-        return json.loads(self.raw_result)
+    def proxy_to_kairos(self, time_range=None):
+        if not time_range:
+            proxy_query = self.time_range
+        else:
+            proxy_query = time_range
 
-    def get_raw_backend_result(self):
-        """ To avoid an unnecessary reserialization. """
-        return self.raw_result
+        proxy_query['metrics'] = [self.query]
+        proxy_query['cache_time'] = 0
+        return query_kairos(proxy_query)
 
     def upsert(self):
         """ Write the KQuery into Redis. Overwrites, writes, all treated the same. """
@@ -121,4 +140,9 @@ class KQuery(DataCache):
 
     def add_mts(self, mts):
         self.related_mts.add(mts)
+
+#    def get_mts(self):
+#        for mts in self.related_mts:
+#            yield mts
+
 

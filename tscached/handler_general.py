@@ -94,26 +94,44 @@ def handle_query():
 
     redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
 
-    kquery = KQuery.from_request(raw_query, redis_client)
-    kquery_result = kquery.get_cached()
+    response = {'queries': []}
 
-    if not kquery_result:
-        # Cold / Miss
-        kairos_result = kquery.query_backend_for_result()
+    # HTTP request may contain one or more kqueries
+    for kquery in KQuery.from_request(raw_query, redis_client):
+        kq_result = kquery.get_cached()
+        if not kq_result:
+            # Cold / Miss
+            kairos_result = kquery.proxy_to_kairos()
+            if len(kairos_result['queries']) != 1:
+                logging.error("Proxy expected 1 KQuery result, found %d" % len(kairos_result['queries']))
+            query_result = kairos_result['queries'][0]
 
-        for result in kairos_result['queries']:
-            for result in result['results']:
-
-                mts = MTS.from_result(result, redis_client)
+            # Loop over every MTS
+            response_kquery = {'results': [], 'sample_size': 0}
+            for mts in MTS.from_result(query_result, redis_client):
                 kquery.add_mts(mts)
                 mts.upsert()
-        kquery.upsert()
 
-        return kquery.get_raw_backend_result()
-    else:
-        logging.info('Redis HIT: %s' % kquery.get_key())
-        # TODO update protocol. Like, how to merge two kairos results?
+                response_kquery['sample_size'] += len(mts.result['values'])
+                response_kquery['results'].append(mts.result)
+
+            kquery.upsert()
+            response['queries'].append(response_kquery)
+
+        else:
+            # Hot / Hit
+            
+            ### TODO check timing data on kquery
+
+            response_kquery = {'results': [], 'sample_size': 0}
+            for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
+                response_kquery['sample_size'] += len(mts.result['values'])
+                response_kquery['results'].append(mts.result)
+            response['queries'].append(response_kquery)
+
+    return json.dumps(response)
 
 
-    return json.dumps(query_kairos(query))
+
+#    return json.dumps(query_kairos(query))
 
