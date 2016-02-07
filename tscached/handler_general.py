@@ -82,22 +82,16 @@ def create_timeseries_key(result):
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
     if request.method == 'POST':
-        raw_query = request.data  # str
-        query = json.loads(raw_query)  # dict
+        request = json.loads(request.data)  # dict
     else:
-        # TODO: We add an extra serialization. Maybe ok since we don't use GET much.
-        # TODO: We cast to str for consistent hashing... this is ungood.
-        raw_query = str(request.args.get('query'))
-        query = json.loads(raw_query)
+        request = json.loads(request.args.get('query'))
 
     logging.info('Query')
-
     redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
-
     response = {'queries': []}
 
     # HTTP request may contain one or more kqueries
-    for kquery in KQuery.from_request(raw_query, redis_client):
+    for kquery in KQuery.from_request(request, redis_client):
         kq_result = kquery.get_cached()
         if not kq_result:
             # Cold / Miss
@@ -119,6 +113,8 @@ def handle_query():
             response['queries'].append(response_kquery)
 
         else:
+            start, end = kquery.derive_time_range(kquery.time_range)
+            
             # Hot / Hit
             
             ### TODO check timing data on kquery

@@ -1,8 +1,10 @@
+import datetime
 import logging
 
 import simplejson as json
 
 from utils import create_key
+from utils import get_timetable
 from utils import query_kairos
 
 
@@ -95,25 +97,46 @@ class KQuery(DataCache):
         self.related_mts = set()
 
     @classmethod
-    def from_request(cls, payload, redis_client):
+    def from_request(cls, request, redis_client):
         """ Generator. HTTP query can create many KQueries.  """
-
-        query = json.loads(payload)
-        for metric in query.get('metrics', []):
+        for metric in request.get('metrics', []):
             new = cls(redis_client)
+            new.time_range = cls.populate_time_range(request)
             new.query = metric
-            new.time_range = cls.populate_time_range(query)
             yield new
 
     @staticmethod
     def populate_time_range(request_dict):
-        """ KQueries need to know their needful time interval. """
+        """ KQueries need to know their needful time interval, so we bring it inside them.  """
         relevant_keys = ['start_relative', 'end_relative', 'start_absolute', 'end_absolute']
         time_range = {}
         for key in relevant_keys:
             if key in request_dict:
                 time_range[key] = request_dict[key]
         return time_range
+
+    @staticmethod
+    def derive_time_range(request):
+        """ Create ms. timestamps related to a HTTP request's data. """
+
+        ### TODO we don't support (we ignore) the time_zone input.
+        now = datetime.datetime.now()
+        start = None
+        end = None
+        if request.get('start_absolute'):
+            start = int(request['start_absolute'])
+        else:
+            td = get_timedelta(request.get('start_relative'))
+            start = int((now - td).strftime("%s")) * 1000
+
+        if request.get('end_absolute'):
+            end = int(request['end_absolute'])
+        elif request.get('end_relative'):
+            td = get_timedelta(request.get('end_relative'))
+            end = int((now - td).strftime("%s")) * 1000
+        else:
+            end = None
+        return (start, end)
 
     def key_basis(self):
         """ We already remove the timestamps and store them separately. """
