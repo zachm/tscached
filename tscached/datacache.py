@@ -85,6 +85,47 @@ class MTS(DataCache):
     def upsert(self):
         self.set_cached(self.result)
 
+    def merge_into(self, new_mts, is_newer=True):
+        """ Merge new_mts into this one
+            Default behavior appends new data; is_newer=False prepends old data.
+            This assumes the MTS match on cardinality.
+            This does not write back to Redis (must call upsert!)
+        """
+        if is_newer:
+            ctr = 0
+            while True:
+                # compare newest timestamp to eldest timestamp in extension.
+                # we take preference on the cached data.
+                if self.result['values'][-1][0] < new_mts.result['values'][ctr][0]:
+                    break
+                ctr += 1
+                # arbitrary cutoff
+                if ctr > 10:
+                    logging.error('Could not conduct merge: %s' % self.get_key())
+                    return
+            if ctr > 0:
+                logging.debug('Trimmed %d values from new update on MTS %s' % (ctr, self.get_key()))
+            self.result['values'].extend(new_mts.result['values'][ctr:])
+        else:
+            ctr = -1
+            while True:
+                # compare eldest timestamp to newest timestamp in extension.
+                # we take preference on the cached data.
+                if self.result['values'][0][0] > new_mts.result['values'][ctr][0]:
+                    break
+                ctr -= 1
+                # arbitrary cutoff
+                if ctr < -10:
+                    logging.error('Could not conduct merge: %s' % self.get_key())
+                    return
+            if ctr == -1:
+                self.result['values'] = new_mts.result['values'] + self.result['values']
+            elif ctr < -1:
+                logging.debug('Trimmed %d values from old update on MTS %s' % (ctr, self.get_key()))
+                self.result['values'] = new_mts.result['values'][ctr] + self.result['values']
+            else:
+                logging.error('Backfill somehow had a positive offset!')
+
 
 class KQuery(DataCache):
 
