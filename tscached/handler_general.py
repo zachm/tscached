@@ -114,22 +114,15 @@ def handle_query():
             kquery.upsert()
             response['queries'].append(response_kquery)
 
+        elif kquery.is_stale(kq_result['last_modified']):
+            logging.debug("KQuery is WARM")
         else:
-            start, end = kquery.derive_time_range(kquery.time_range)
-            if not end:
-                end = kq_result['last_modified']
-
-            # TODO configurable cutoff
-            logging.debug("%d %d %d" % (time.time()*1000, end, time.time()*1000 - end))
-            if (time.time()* 1000 - end) > 10000:
-                logging.debug("KQuery is WARM")
-            else:
-                logging.debug("KQuery is HOT")
-                response_kquery = {'results': [], 'sample_size': 0}
-                for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
-                    response_kquery['sample_size'] += len(mts.result['values'])
-                    response_kquery['results'].append(mts.result)
-                response['queries'].append(response_kquery)
+            logging.debug("KQuery is HOT")
+            response_kquery = {'results': [], 'sample_size': 0}
+            for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
+                response_kquery['sample_size'] += len(mts.result['values'])
+                response_kquery['results'].append(mts.result)
+            response['queries'].append(response_kquery)
 
     return json.dumps(response)
 
