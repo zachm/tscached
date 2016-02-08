@@ -1,10 +1,11 @@
 import datetime
 import logging
+import time
 
 import simplejson as json
 
 from utils import create_key
-from utils import get_timetable
+from utils import get_timedelta
 from utils import query_kairos
 
 
@@ -158,7 +159,8 @@ class KQuery(DataCache):
 
         # This could be a separate Redis layer but I don't see how that's a win.
         value['mts_keys'] = [x.get_key() for x in self.related_mts]
-
+        # Use as a sentinel to check for WARM vs HOT
+        value['last_modified'] = time.time() * 1000
         self.set_cached(value)
 
     def add_mts(self, mts):

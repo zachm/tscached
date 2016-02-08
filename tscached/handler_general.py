@@ -1,7 +1,9 @@
+import datetime
 import hashlib
 import logging
 import os
 import simplejson as json
+import time
 import yaml
 
 from flask import make_response
@@ -82,16 +84,16 @@ def create_timeseries_key(result):
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
     if request.method == 'POST':
-        request = json.loads(request.data)  # dict
+        payload = json.loads(request.data)  # dict
     else:
-        request = json.loads(request.args.get('query'))
+        payload = json.loads(request.args.get('query'))
 
     logging.info('Query')
     redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
     response = {'queries': []}
 
     # HTTP request may contain one or more kqueries
-    for kquery in KQuery.from_request(request, redis_client):
+    for kquery in KQuery.from_request(payload, redis_client):
         kq_result = kquery.get_cached()
         if not kq_result:
             # Cold / Miss
@@ -114,16 +116,20 @@ def handle_query():
 
         else:
             start, end = kquery.derive_time_range(kquery.time_range)
-            
-            # Hot / Hit
-            
-            ### TODO check timing data on kquery
+            if not end:
+                end = kq_result['last_modified']
 
-            response_kquery = {'results': [], 'sample_size': 0}
-            for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
-                response_kquery['sample_size'] += len(mts.result['values'])
-                response_kquery['results'].append(mts.result)
-            response['queries'].append(response_kquery)
+            # TODO configurable cutoff
+            logging.debug("%d %d %d" % (time.time()*1000, end, time.time()*1000 - end))
+            if (time.time()* 1000 - end) > 10000:
+                logging.debug("KQuery is WARM")
+            else:
+                logging.debug("KQuery is HOT")
+                response_kquery = {'results': [], 'sample_size': 0}
+                for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
+                    response_kquery['sample_size'] += len(mts.result['values'])
+                    response_kquery['results'].append(mts.result)
+                response['queries'].append(response_kquery)
 
     return json.dumps(response)
 
