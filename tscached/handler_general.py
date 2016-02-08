@@ -57,30 +57,6 @@ def series_equivalent(a, b):
     return True
 
 
-def create_timeseries_key(result):
-    """ Given a result (single TS dict), return a hash describing its semantics. """
-
-    big_concat = result['name'] + '::'
-
-    for tag in sorted(result['tags'].keys()):
-        big_concat += tag + ':' + sorted(result['tags'][tag]).join(',')
-    big_concat += '::'
-
-    groupings = []
-    for grouping in result['group_by']:
-        grouping_str = ''
-        for key in sorted(grouping.keys()):
-            grouping_str += '%s.%s' % (key, grouping[key])
-        groupings.append(grouping_str)
-    big_concat += '::' + sorted(groupings).join(',')
-
-    return 'tscached::mts::' + hashlib.sha224(big_concat).hexdigest()
-
-
-
-
-
-
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
     if request.method == 'POST':
