@@ -78,14 +78,15 @@ class MTS(DataCache):
     def key_basis(self):
         mts_key_dict = {}
         mts_key_dict['tags'] = self.result['tags']
-        mts_key_dict['group_by'] = self.result['group_by']
+        if self.result.get('group_by'):
+            mts_key_dict['group_by'] = self.result['group_by']
         mts_key_dict['name'] = self.result['name']
         return mts_key_dict
 
     def upsert(self):
         self.set_cached(self.result)
 
-    def merge_into(self, new_mts, is_newer=True):
+    def merge_from(self, new_mts, is_newer=True):
         """ Merge new_mts into this one
             Default behavior appends new data; is_newer=False prepends old data.
             This assumes the MTS match on cardinality.
@@ -209,7 +210,10 @@ class KQuery(DataCache):
 
         proxy_query['metrics'] = [self.query]
         proxy_query['cache_time'] = 0
-        return query_kairos(proxy_query)
+        kairos_result = query_kairos(proxy_query)
+        if len(kairos_result['queries']) != 1:
+            logging.error("Proxy expected 1 KQuery result, found %d" % len(kairos_result['queries']))
+        return kairos_result
 
     def upsert(self):
         """ Write the KQuery into Redis. Overwrites, writes, all treated the same. """

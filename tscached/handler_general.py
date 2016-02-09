@@ -74,13 +74,10 @@ def handle_query():
         if not kq_result:
             # Cold / Miss
             kairos_result = kquery.proxy_to_kairos()
-            if len(kairos_result['queries']) != 1:
-                logging.error("Proxy expected 1 KQuery result, found %d" % len(kairos_result['queries']))
-            query_result = kairos_result['queries'][0]
 
             # Loop over every MTS
             response_kquery = {'results': [], 'sample_size': 0}
-            for mts in MTS.from_result(query_result, redis_client):
+            for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
                 kquery.add_mts(mts)
                 mts.upsert()
 
@@ -90,9 +87,7 @@ def handle_query():
             kquery.upsert()
             response['queries'].append(response_kquery)
 
-        elif kquery.is_stale(kq_result['last_modified']):
-            logging.debug("KQuery is WARM")
-        else:
+        elif not kquery.is_stale(kq_result['last_modified']):
             logging.debug("KQuery is HOT")
             response_kquery = {'results': [], 'sample_size': 0}
             for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
@@ -100,9 +95,40 @@ def handle_query():
                 response_kquery['results'].append(mts.result)
             response['queries'].append(response_kquery)
 
+        else:
+            ### Still TODO: trim old data
+
+            logging.debug('KQuery is WARM')
+            response_kquery = {'results': [], 'sample_size': 0}
+
+            last_modified = kq_result['last_modified']
+            new_kairos_result = kquery.proxy_to_kairos({'start_absolute': last_modified * 1000})
+
+            cached_mts = {}  # redis key to MTS
+            # pull in old MTS, put them in a lookup table
+            for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
+                kquery.add_mts(mts)  # we want to write these back eventually
+                cached_mts[mts.get_key()] = mts
+
+            # loop over newly returned MTS. if they already existed, merge/write. if not, just write.
+            for mts in MTS.from_result(new_kairos_result['queries'][0], redis_client):
+                logging.debug("Size of cached_mts: %d" % len(cached_mts.keys()))
+
+                old_mts = cached_mts.get(mts.get_key())
+                if not old_mts:  # would have been added in previous loop
+                    kquery.add_mts(mts)
+                    mts.upsert()
+
+                    response_kquery['sample_size'] += len(mts.result['values'])
+                    response_kquery['results'].append(mts.result)
+                else:
+                    old_mts.merge_from(mts, is_newer=True)
+                    old_mts.upsert()
+
+                    # TODO this bit needs trimming
+                    response_kquery['sample_size'] += len(old_mts.result['values'])
+                    response_kquery['results'].append(old_mts.result)
+            kquery.upsert()
+            response['queries'].append(response_kquery)
     return json.dumps(response)
-
-
-
 #    return json.dumps(query_kairos(query))
-
