@@ -71,35 +71,31 @@ def handle_query():
     # HTTP request may contain one or more kqueries
     for kquery in KQuery.from_request(payload, redis_client):
         kq_result = kquery.get_cached()
+        response_kquery = {'results': [], 'sample_size': 0}
         if not kq_result:
             # Cold / Miss
-            kairos_result = kquery.proxy_to_kairos()
+            logging.debug('KQuery is COLD')
 
+            kairos_result = kquery.proxy_to_kairos()
             # Loop over every MTS
-            response_kquery = {'results': [], 'sample_size': 0}
             for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
                 kquery.add_mts(mts)
                 mts.upsert()
-
-                response_kquery['sample_size'] += len(mts.result['values'])
-                response_kquery['results'].append(mts.result)
+                response_kquery = mts.build_response(kquery, response_kquery, trim=False)
 
             kquery.upsert()
             response['queries'].append(response_kquery)
 
         elif not kquery.is_stale(kq_result['last_modified']):
+            # Hot / Hit
             logging.debug("KQuery is HOT")
-            response_kquery = {'results': [], 'sample_size': 0}
             for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
-                response_kquery['sample_size'] += len(mts.result['values'])
-                response_kquery['results'].append(mts.result)
+                response_kquery = mts.build_response(kquery, response_kquery)
             response['queries'].append(response_kquery)
 
         else:
-            ### Still TODO: trim old data
-
+            # Warm / Stale
             logging.debug('KQuery is WARM')
-            response_kquery = {'results': [], 'sample_size': 0}
 
             last_modified = kq_result['last_modified']
             new_kairos_result = kquery.proxy_to_kairos({'start_absolute': last_modified * 1000})
@@ -118,16 +114,12 @@ def handle_query():
                 if not old_mts:  # would have been added in previous loop
                     kquery.add_mts(mts)
                     mts.upsert()
-
-                    response_kquery['sample_size'] += len(mts.result['values'])
-                    response_kquery['results'].append(mts.result)
+                    response_kquery = mts.build_response(kquery, reponse_kquery, trim=False)
                 else:
                     old_mts.merge_from(mts, is_newer=True)
                     old_mts.upsert()
+                    response_kquery = old_mts.build_response(kquery, response_kquery)
 
-                    # TODO this bit needs trimming
-                    response_kquery['sample_size'] += len(old_mts.result['values'])
-                    response_kquery['results'].append(old_mts.result)
             kquery.upsert()
             response['queries'].append(response_kquery)
     return json.dumps(response)

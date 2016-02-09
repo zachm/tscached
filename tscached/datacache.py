@@ -80,6 +80,8 @@ class MTS(DataCache):
         mts_key_dict['tags'] = self.result['tags']
         if self.result.get('group_by'):
             mts_key_dict['group_by'] = self.result['group_by']
+        if self.result.get('aggregators'):
+            mts_key_dict['aggregators'] = self.result['aggregators']
         mts_key_dict['name'] = self.result['name']
         return mts_key_dict
 
@@ -126,6 +128,47 @@ class MTS(DataCache):
                 self.result['values'] = new_mts.result['values'][ctr] + self.result['values']
             else:
                 logging.error('Backfill somehow had a positive offset!')
+
+    def trim(self, start, end=None):
+        """ Return a subset of the MTS to give back to the user.
+            start, end are datetimes
+            We assme the MTS already contains all needed data.
+        """
+        RESOLUTION_SEC = 10
+
+        first_ts = self.result['values'][0][0]
+        last_ts = self.result['values'][-1][0]
+        ts_size = len(self.result['values'])
+        start = int(start.strftime('%s'))
+
+        # (ms. difference) -> sec. difference -> 10sec. difference
+        start_from_end_offset = int((last_ts - (start * 1000)) / 1000 / RESOLUTION_SEC)
+        start_from_start_offset = ts_size - start_from_end_offset - 1  # off by one
+
+        if not end:
+            logging.debug('Trimming: from_end is %d, from_start is %d' % (start_from_end_offset, start_from_start_offset))
+            return self.result['values'][start_from_start_offset:]
+
+        end = int(end.strftime('%s'))
+        end_from_end_offset = int((last_ts - (end * 1000)) / 1000 / RESOLUTION_SEC)
+        end_from_start_offset = ts_size - end_from_end_offset
+        logging.debug('Trimming (mid value): start_from_end is %d, end_from_end is %d' % (start_from_end_offset, end_from_end_offset))
+        return self.result['values'][start_from_start_offset:end_from_start_offset]
+
+    def build_response(self, kquery, response_dict, trim=True):
+        """ Mutates internal state and returns it as a dict.
+            This should be the last method called in the lifecycle of MTS objects.
+            kquery - the kquery this result belongs to.
+            response_dict - the accumulator.
+            trim - to trim or not to trim.
+        """
+        if trim:
+            start_trim, end_trim = kquery.get_needed_absolute_time_range()
+            logging.debug('Trimming: %s, %s' % (start_trim, end_trim))
+            self.result['values'] = self.trim(start_trim, end_trim)
+        response_dict['sample_size'] += len(self.result['values'])
+        response_dict['results'].append(self.result)
+        return response_dict
 
 
 class KQuery(DataCache):
