@@ -1,0 +1,1 @@
+from tscached import app
