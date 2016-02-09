@@ -33,29 +33,6 @@ if not app.debug:
 def handle_root():
     return "hello world!"
 
-def series_equivalent(a, b):
-    """ Given dicts from .queries[].results[].* - verify if they match one another.
-        Much of this is O(n^2) - we presume n will be rather small.
-    """
-    # metric names must be the same
-    if a['name'] != b['name']:
-        return False
-
-    # same number of tags
-    if len(a['tags']) != len(b['tags']):
-        return False
-    for tag_key in a['tags']:
-        if a[tag_key] != b[tag_key]:
-            return False
-
-    # same number of groupings
-    if len(a['group_by']) != len(b['group_by']):
-        return False
-    for grouping in a['group_by']:
-        if grouping not in b['group_by']:
-            return False
-    return True
-
 
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
