@@ -223,12 +223,12 @@ class KQuery(DataCache):
 
     def is_stale(self, last_modified, staleness_threshold=10):
         """ Boolean: Is the returned data too old?
-                last_modified: a unix timestamp pulled out of a cached kquery structure
+                last_modified: a millisecond unix timestamp pulled out of a cached kquery structure
                 staleness_threshold: number of seconds until a HOT query needs updating
         """
         start, end = self.get_needed_absolute_time_range()
         now = datetime.datetime.now()
-        last_modified = datetime.datetime.fromtimestamp(last_modified)
+        last_modified = datetime.datetime.fromtimestamp(int(last_modified / 1000))
 
         if end:
             if end < now and last_modified < now and last_modified > end:
@@ -263,7 +263,7 @@ class KQuery(DataCache):
         # This could be a separate Redis layer but I don't see how that's a win.
         self.query['mts_keys'] = [x.get_key() for x in self.related_mts]
         # Use as a sentinel to check for WARM vs HOT
-        self.query['last_modified'] = time.time()
+        self.query['last_modified'] = time.time() * 1000
         self.set_cached(self.query)
 
     def add_mts(self, mts):

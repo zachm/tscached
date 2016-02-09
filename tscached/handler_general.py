@@ -74,8 +74,7 @@ def handle_query():
             # Warm / Stale
             logging.debug('KQuery is WARM')
 
-            last_modified = kq_result['last_modified']
-            new_kairos_result = kquery.proxy_to_kairos({'start_absolute': last_modified * 1000})
+            new_kairos_result = kquery.proxy_to_kairos({'start_absolute': kq_result['last_modified']})
 
             cached_mts = {}  # redis key to MTS
             # pull in old MTS, put them in a lookup table
