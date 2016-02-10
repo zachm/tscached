@@ -90,7 +90,7 @@ def handle_query():
                 if not old_mts:  # would have been added in previous loop
                     kquery.add_mts(mts)
                     mts.upsert()
-                    response_kquery = mts.build_response(kquery, reponse_kquery, trim=False)
+                    response_kquery = mts.build_response(kquery, response_kquery, trim=False)
                 else:
                     old_mts.merge_from(mts, is_newer=True)
                     old_mts.upsert()
