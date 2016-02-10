@@ -54,11 +54,17 @@ def handle_query():
             logging.debug('KQuery is COLD')
 
             kairos_result = kquery.proxy_to_kairos()
+            pipeline = redis_client.pipeline()
             # Loop over every MTS
             for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
                 kquery.add_mts(mts)
-                mts.upsert()
+                #mts.upsert()
+                pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
                 response_kquery = mts.build_response(kquery, response_kquery, trim=False)
+
+            result = pipeline.execute()
+            success_count = len(filter(lambda x: x == True, result))
+            logging.debug("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
             kquery.upsert()
             response['queries'].append(response_kquery)
@@ -83,18 +89,24 @@ def handle_query():
                 cached_mts[mts.get_key()] = mts
 
             # loop over newly returned MTS. if they already existed, merge/write. if not, just write.
+            pipeline = redis_client.pipeline()
             for mts in MTS.from_result(new_kairos_result['queries'][0], redis_client):
                 logging.debug("Size of cached_mts: %d" % len(cached_mts.keys()))
 
                 old_mts = cached_mts.get(mts.get_key())
                 if not old_mts:  # would have been added in previous loop
                     kquery.add_mts(mts)
-                    mts.upsert()
+                    pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
+                    #mts.upsert()
                     response_kquery = mts.build_response(kquery, response_kquery, trim=False)
                 else:
                     old_mts.merge_from(mts, is_newer=True)
-                    old_mts.upsert()
+                    pipeline.set(old_mts.get_key(), json.dumps(old_mts.result), ex=old_mts.expiry)
+                    #old_mts.upsert()
                     response_kquery = old_mts.build_response(kquery, response_kquery)
+            result = pipeline.execute()
+            success_count = len(filter(lambda x: x == True, result))
+            logging.debug("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
             kquery.upsert()
             response['queries'].append(response_kquery)

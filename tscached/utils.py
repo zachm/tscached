@@ -43,5 +43,4 @@ def create_key(data, tipo):
     """ data should be hashable (str, usually). tipo is str. """
     genHash = hashlib.sha224(data).hexdigest()
     key = "tscached:%s:%s" % (tipo, genHash)
-    logging.debug("generated redis key: %s" % key)
     return key

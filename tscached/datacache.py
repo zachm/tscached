@@ -20,12 +20,15 @@ class DataCache(object):
 
     def get_cached(self):
         """ Does this entry exist in our cache? result/False. """
-        result = self.redis_client.get(self.get_key())
+        return self.process_cached_data(self.redis_client.get(self.get_key()))
+
+    def process_cached_data(self, result):
+        """ Abstracted from get_cached because of pipelining. """
         if result:
-            logging.info('Cache HIT: %s' % self.get_key())
+            logging.info('Cache HIT: %s' % self.redis_key)
             return json.loads(result)
         else:
-            logging.info('Cache MISS: %s' % self.get_key())
+            logging.info('Cache MISS: %s' % self.redis_key)
             return False
 
     def set_cached(self, value):
@@ -68,12 +71,17 @@ class MTS(DataCache):
 
     @classmethod
     def from_cache(cls, redis_keys, redis_client):
-        for redis_key in redis_keys:
-            new = cls(redis_client)
-            new.redis_key = redis_key
-            new.result = new.get_cached()
-            yield new
+        pipeline = redis_client.pipeline()
+        for key in redis_keys:
+            pipeline.get(key)
+        results = pipeline.execute()
 
+        for ctr in xrange(len(redis_keys)):
+            result = results[ctr]
+            new = cls(redis_client)
+            new.redis_key = redis_keys[ctr]
+            new.result = new.process_cached_data(results[ctr])
+            yield new
 
     def key_basis(self):
         mts_key_dict = {}
