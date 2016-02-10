@@ -79,7 +79,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     request = load_example_data(args.request)
-    request['start_relative'] = {'value': '1', 'unit': 'minutes'}
+    # request['start_relative'] = {'value': '1', 'unit': 'minutes'}
 
 
     url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
