@@ -25,10 +25,10 @@ class DataCache(object):
     def process_cached_data(self, result):
         """ Abstracted from get_cached because of pipelining. """
         if result:
-            logging.info('Cache HIT: %s' % self.redis_key)
+            logging.debug('Cache HIT: %s' % self.redis_key)
             return json.loads(result)
         else:
-            logging.info('Cache MISS: %s' % self.redis_key)
+            logging.debug('Cache MISS: %s' % self.redis_key)
             return False
 
     def set_cached(self, value):

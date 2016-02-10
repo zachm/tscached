@@ -51,7 +51,7 @@ def handle_query():
         response_kquery = {'results': [], 'sample_size': 0}
         if not kq_result:
             # Cold / Miss
-            logging.debug('KQuery is COLD')
+            logging.info('KQuery is COLD')
 
             kairos_result = kquery.proxy_to_kairos()
             pipeline = redis_client.pipeline()
@@ -64,21 +64,21 @@ def handle_query():
 
             result = pipeline.execute()
             success_count = len(filter(lambda x: x == True, result))
-            logging.debug("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
+            logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
             kquery.upsert()
             response['queries'].append(response_kquery)
 
         elif not kquery.is_stale(kq_result['last_modified']):
             # Hot / Hit
-            logging.debug("KQuery is HOT")
+            logging.info("KQuery is HOT")
             for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
                 response_kquery = mts.build_response(kquery, response_kquery)
             response['queries'].append(response_kquery)
 
         else:
             # Warm / Stale
-            logging.debug('KQuery is WARM')
+            logging.info('KQuery is WARM')
 
             new_kairos_result = kquery.proxy_to_kairos({'start_absolute': kq_result['last_modified']})
 
@@ -106,7 +106,7 @@ def handle_query():
                     response_kquery = old_mts.build_response(kquery, response_kquery)
             result = pipeline.execute()
             success_count = len(filter(lambda x: x == True, result))
-            logging.debug("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
+            logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
             kquery.upsert()
             response['queries'].append(response_kquery)
