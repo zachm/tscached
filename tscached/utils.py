@@ -1,12 +1,11 @@
 import datetime
 import hashlib
-import logging
 
 import requests
 import simplejson as json
 
-KAIROS_HOST='localhost'
-KAIROS_PORT=8080
+KAIROS_HOST = 'localhost'
+KAIROS_PORT = 8080
 
 
 # note: this doesn't work perfectly for months (31 days) or years (365 days)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import argparse
 import datetime
-import sys
 
 import requests
 import simplejson as json
@@ -12,7 +11,7 @@ import simplejson as json
     Not actually automated testing, but a harness for comparing
     tscached and kairosdb outputs.
 
-    At some point later in development, this is going to be part of a 
+    At some point later in development, this is going to be part of a
     full acceptance testing suite. That's the goal, anyway.
 """
 
@@ -80,7 +79,6 @@ if __name__ == '__main__':
 
     request = load_example_data(args.request)
     # request['start_relative'] = {'value': '1', 'unit': 'minutes'}
-
 
     url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
     if args.verb == 'POST':

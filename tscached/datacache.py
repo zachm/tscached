@@ -77,7 +77,6 @@ class MTS(DataCache):
         results = pipeline.execute()
 
         for ctr in xrange(len(redis_keys)):
-            result = results[ctr]
             new = cls(redis_client)
             new.redis_key = redis_keys[ctr]
             new.result = new.process_cached_data(results[ctr])
@@ -144,7 +143,6 @@ class MTS(DataCache):
         """
         RESOLUTION_SEC = 10
 
-        first_ts = self.result['values'][0][0]
         last_ts = self.result['values'][-1][0]
         ts_size = len(self.result['values'])
         start = int(start.strftime('%s'))
@@ -154,13 +152,15 @@ class MTS(DataCache):
         start_from_start_offset = ts_size - start_from_end_offset - 1  # off by one
 
         if not end:
-            logging.debug('Trimming: from_end is %d, from_start is %d' % (start_from_end_offset, start_from_start_offset))
+            logging.debug('Trimming: from_end is %d, from_start is %d' % (start_from_end_offset,
+                          start_from_start_offset))
             return self.result['values'][start_from_start_offset:]
 
         end = int(end.strftime('%s'))
         end_from_end_offset = int((last_ts - (end * 1000)) / 1000 / RESOLUTION_SEC)
         end_from_start_offset = ts_size - end_from_end_offset
-        logging.debug('Trimming (mid value): start_from_end is %d, end_from_end is %d' % (start_from_end_offset, end_from_end_offset))
+        logging.debug('Trimming (mid value): start_from_end is %d, end_from_end is %d' %
+                      (start_from_end_offset, end_from_end_offset))
         return self.result['values'][start_from_start_offset:end_from_start_offset]
 
     def build_response(self, kquery, response_dict, trim=True):
@@ -209,7 +209,7 @@ class KQuery(DataCache):
     def get_needed_absolute_time_range(self):
         """ Create datetimes from HTTP-type data. Gives 2-tuple (start, end). end can be None. """
 
-        ### TODO we don't support the time_zone input, also millisecond resolution.
+        # TODO we don't support the time_zone input, also millisecond resolution.
         now = datetime.datetime.now()
         start = None
         end = None
