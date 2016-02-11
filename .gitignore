@@ -3,3 +3,5 @@
 venv
 virtualenv_run
 *.swp
+.tox/*
+tscached.egg-info/*
