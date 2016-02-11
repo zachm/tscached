@@ -5,8 +5,8 @@ from flask import request
 import redis
 
 from tscached import app
-from tscached.datacache import KQuery
-from tscached.datacache import MTS
+from tscached.kquery import KQuery
+from tscached.mts import MTS
 
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
