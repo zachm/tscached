@@ -102,4 +102,3 @@ def handle_query():
             kquery.upsert()
             response['queries'].append(response_kquery)
     return json.dumps(response)
-#    return json.dumps(query_kairos(query))
