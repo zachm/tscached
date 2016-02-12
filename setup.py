@@ -29,7 +29,7 @@ setup(
 
     keywords='metrics proxy caching kairosdb redis',
 
-    packages=find_packages(exclude=['tests', 'testing']),
+    packages=find_packages(exclude=['tests']),
 
     install_requires=[],
 
