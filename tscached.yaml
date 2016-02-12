@@ -1,0 +1,15 @@
+---
+tscached:
+    redis:
+        host: "localhost"
+        port: 6379
+        default_expire: 10800  # 3 hours
+
+    kairosdb:
+        host: "localhost"
+        port: 8080
+
+    webapp:
+        host: "0.0.0.0"
+        port: 8008
+        log_level: "logging.DEBUG"

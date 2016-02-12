@@ -1,5 +1,6 @@
 import logging
 import simplejson as json
+import yaml
 
 from flask import request
 import redis
@@ -8,8 +9,10 @@ from tscached import app
 from tscached.kquery import KQuery
 from tscached.mts import MTS
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
+
+with open('tscached.yaml', 'r') as config_file:
+    CONF_DICT = yaml.load(config_file.read())['tscached']
+
 
 if not app.debug:
     logger = logging.getLogger()
@@ -33,7 +36,7 @@ def handle_query():
         payload = json.loads(request.args.get('query'))
 
     logging.info('Query')
-    redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
+    redis_client = redis.StrictRedis(host=CONF_DICT['redis']['host'], port=CONF_DICT['redis']['port'])
     response = {'queries': []}
 
     # HTTP request may contain one or more kqueries
@@ -44,7 +47,8 @@ def handle_query():
             # Cold / Miss
             logging.info('KQuery is COLD')
 
-            kairos_result = kquery.proxy_to_kairos()
+            kairos_result = kquery.proxy_to_kairos(CONF_DICT['kairosdb']['host'],
+                                                   CONF_DICT['kairosdb']['port'])
             pipeline = redis_client.pipeline()
             # Loop over every MTS
             for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
@@ -71,7 +75,9 @@ def handle_query():
             # Warm / Stale
             logging.info('KQuery is WARM')
 
-            new_kairos_result = kquery.proxy_to_kairos({'start_absolute': kq_result['last_modified']})
+            new_kairos_result = kquery.proxy_to_kairos(CONF_DICT['kairosdb']['host'],
+                                                       CONF_DICT['kairosdb']['port'],
+                                                       {'start_absolute': kq_result['last_modified']})
 
             cached_mts = {}  # redis key to MTS
             # pull in old MTS, put them in a lookup table

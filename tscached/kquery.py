@@ -7,10 +7,6 @@ from utils import get_timedelta
 from utils import query_kairos
 
 
-KAIROS_HOST = 'localhost'
-KAIROS_PORT = 8080
-
-
 class KQuery(DataCache):
 
     expiry = 10800  # three hours, matching Kairos
@@ -85,7 +81,7 @@ class KQuery(DataCache):
         """ We already remove the timestamps and store them separately. """
         return self.query
 
-    def proxy_to_kairos(self, time_range=None):
+    def proxy_to_kairos(self, host, port, time_range=None):
         if not time_range:
             proxy_query = self.time_range
         else:
@@ -93,7 +89,7 @@ class KQuery(DataCache):
 
         proxy_query['metrics'] = [self.query]
         proxy_query['cache_time'] = 0
-        kairos_result = query_kairos(KAIROS_HOST, KAIROS_PORT, proxy_query)
+        kairos_result = query_kairos(host, port, proxy_query)
         if len(kairos_result['queries']) != 1:
             logging.error("Proxy expected 1 KQuery result, found %d" % len(kairos_result['queries']))
         return kairos_result
