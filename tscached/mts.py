@@ -1,6 +1,7 @@
 import logging
 
 from datacache import DataCache
+from utils import get_needed_absolute_time_range
 
 
 class MTS(DataCache):
@@ -113,15 +114,14 @@ class MTS(DataCache):
                       (start_from_end_offset, end_from_end_offset))
         return self.result['values'][start_from_start_offset:end_from_start_offset]
 
-    def build_response(self, kquery, response_dict, trim=True):
+    def build_response(self, time_range, response_dict, trim=True):
         """ Mutates internal state and returns it as a dict.
             This should be the last method called in the lifecycle of MTS objects.
-            kquery - the kquery this result belongs to.
             response_dict - the accumulator.
             trim - to trim or not to trim.
         """
         if trim:
-            start_trim, end_trim = kquery.get_needed_absolute_time_range()
+            start_trim, end_trim = get_needed_absolute_time_range(time_range)
             logging.debug('Trimming: %s, %s' % (start_trim, end_trim))
             self.result['values'] = self.trim(start_trim, end_trim)
         response_dict['sample_size'] += len(self.result['values'])

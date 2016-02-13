@@ -1,9 +1,10 @@
+import copy
 import datetime
 import logging
 import time
 
 from datacache import DataCache
-from utils import get_timedelta
+from utils import get_needed_absolute_time_range
 from utils import query_kairos
 
 
@@ -22,47 +23,15 @@ class KQuery(DataCache):
         """ Generator. HTTP query can create many KQueries.  """
         for metric in request.get('metrics', []):
             new = cls(redis_client)
-            new.populate_time_range(request)
             new.query = metric
             yield new
 
-    def populate_time_range(self, request_dict):
-        """ KQueries need to know their time interval, so we bring it inside them.  """
-        relevant_keys = ['start_relative', 'end_relative', 'start_absolute', 'end_absolute']
-        self.time_range = {}
-        for key in relevant_keys:
-            if key in request_dict:
-                self.time_range[key] = request_dict[key]
-
-    def get_needed_absolute_time_range(self):
-        """ Create datetimes from HTTP-type data. Gives 2-tuple (start, end). end can be None. """
-
-        # TODO we don't support the time_zone input, also millisecond resolution.
-        now = datetime.datetime.now()
-        start = None
-        end = None
-        if self.time_range.get('start_absolute'):
-            start = datetime.datetime.fromtimestamp(int(self.time_range['start_absolute']) / 1000)
-        else:
-            td = get_timedelta(self.time_range.get('start_relative'))
-            start = now - td
-
-        if self.time_range.get('end_absolute'):
-            end = datetime.datetime.fromtimestamp(int(self.time_range['end_absolute']) / 1000)
-        elif self.time_range.get('end_relative'):
-            td = get_timedelta(self.time_range.get('end_relative'))
-            end = now - td
-        else:
-            end = None
-
-        return (start, end)
-
-    def is_stale(self, last_modified, staleness_threshold=10):
+    def is_stale(self, time_range, last_modified, staleness_threshold=10):
         """ Boolean: Is the returned data too old?
                 last_modified: a millisecond unix timestamp pulled out of a cached kquery structure
                 staleness_threshold: number of seconds until a HOT query needs updating
         """
-        start, end = self.get_needed_absolute_time_range()
+        start, end = get_needed_absolute_time_range(time_range)
         now = datetime.datetime.now()
         last_modified = datetime.datetime.fromtimestamp(int(last_modified / 1000))
 
@@ -81,12 +50,9 @@ class KQuery(DataCache):
         """ We already remove the timestamps and store them separately. """
         return self.query
 
-    def proxy_to_kairos(self, host, port, time_range=None):
-        if not time_range:
-            proxy_query = self.time_range
-        else:
-            proxy_query = time_range
-
+    def proxy_to_kairos(self, host, port, time_range):
+        """ time_range can be generated via utils.populate_time_range """
+        proxy_query = copy.deepcopy(time_range)
         proxy_query['metrics'] = [self.query]
         proxy_query['cache_time'] = 0
         kairos_result = query_kairos(host, port, proxy_query)

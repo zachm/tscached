@@ -35,3 +35,37 @@ def create_key(data, tipo):
     genHash = hashlib.md5(data).hexdigest()
     key = "tscached:%s:%s" % (tipo, genHash)
     return key
+
+
+def populate_time_range(request_dict):
+    """ Filter a Kairos HTTP request for only its temporal members. """
+    relevant_keys = ['start_relative', 'end_relative', 'start_absolute', 'end_absolute']
+    time_range = {}
+    for key in relevant_keys:
+        if key in request_dict:
+            time_range[key] = request_dict[key]
+    return time_range
+
+
+def get_needed_absolute_time_range(time_range):
+    """ Create datetimes from HTTP-type data. Gives 2-tuple (start, end). end can be None. """
+
+    # TODO we don't support the time_zone input, also millisecond resolution.
+    now = datetime.datetime.now()
+    start = None
+    end = None
+    if time_range.get('start_absolute'):
+        start = datetime.datetime.fromtimestamp(int(time_range['start_absolute']) / 1000)
+    else:
+        td = get_timedelta(time_range.get('start_relative'))
+        start = now - td
+
+    if time_range.get('end_absolute'):
+        end = datetime.datetime.fromtimestamp(int(time_range['end_absolute']) / 1000)
+    elif time_range.get('end_relative'):
+        td = get_timedelta(time_range.get('end_relative'))
+        end = now - td
+    else:
+        end = None
+
+    return (start, end)

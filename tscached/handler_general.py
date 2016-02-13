@@ -8,7 +8,7 @@ import redis
 from tscached import app
 from tscached.kquery import KQuery
 from tscached.mts import MTS
-
+from tscached.utils import populate_time_range
 
 with open('tscached.yaml', 'r') as config_file:
     CONF_DICT = yaml.load(config_file.read())['tscached']
@@ -37,6 +37,7 @@ def handle_query():
 
     logging.info('Query')
     redis_client = redis.StrictRedis(host=CONF_DICT['redis']['host'], port=CONF_DICT['redis']['port'])
+    kairos_time_range = populate_time_range(payload)
     response = {'queries': []}
 
     # HTTP request may contain one or more kqueries
@@ -48,14 +49,15 @@ def handle_query():
             logging.info('KQuery is COLD')
 
             kairos_result = kquery.proxy_to_kairos(CONF_DICT['kairosdb']['host'],
-                                                   CONF_DICT['kairosdb']['port'])
+                                                   CONF_DICT['kairosdb']['port'],
+                                                   kairos_time_range)
             pipeline = redis_client.pipeline()
             # Loop over every MTS
             for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
                 kquery.add_mts(mts)
                 # mts.upsert()
                 pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
-                response_kquery = mts.build_response(kquery, response_kquery, trim=False)
+                response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
 
             result = pipeline.execute()
             success_count = len(filter(lambda x: x is True, result))
@@ -64,11 +66,11 @@ def handle_query():
             kquery.upsert()
             response['queries'].append(response_kquery)
 
-        elif not kquery.is_stale(kq_result['last_modified']):
+        elif not kquery.is_stale(kairos_time_range, kq_result['last_modified']):
             # Hot / Hit
             logging.info("KQuery is HOT")
             for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
-                response_kquery = mts.build_response(kquery, response_kquery)
+                response_kquery = mts.build_response(kairos_time_range, response_kquery)
             response['queries'].append(response_kquery)
 
         else:
@@ -95,12 +97,12 @@ def handle_query():
                     kquery.add_mts(mts)
                     pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
                     # mts.upsert()
-                    response_kquery = mts.build_response(kquery, response_kquery, trim=False)
+                    response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
                 else:
                     old_mts.merge_from(mts, is_newer=True)
                     pipeline.set(old_mts.get_key(), json.dumps(old_mts.result), ex=old_mts.expiry)
                     # old_mts.upsert()
-                    response_kquery = old_mts.build_response(kquery, response_kquery)
+                    response_kquery = old_mts.build_response(kairos_time_range, response_kquery)
             result = pipeline.execute()
             success_count = len(filter(lambda x: x is True, result))
             logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
