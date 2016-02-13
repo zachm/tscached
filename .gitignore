@@ -5,3 +5,5 @@ virtualenv_run
 *.swp
 .tox/*
 tscached.egg-info/*
+.coverage
+htmlcov/*
