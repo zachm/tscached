@@ -1,9 +1,11 @@
+import datetime
 from mock import patch
 import pytest
 import simplejson as json
 
 from tscached.utils import create_key
 from tscached.utils import get_timedelta
+from tscached.utils import get_needed_absolute_time_range
 from tscached.utils import populate_time_range
 from tscached.utils import query_kairos
 
@@ -69,5 +71,27 @@ def test_populate_time_range_subset():
     assert populate_time_range(example_request) == {'start_relative': {'value': '1', 'unit': 'hours'}}
 
 
-def test_get_needed_absolute_time_range():
-    pass
+@patch('tscached.utils.datetime.datetime', autospec=True)
+def test_get_needed_absolute_time_range(m_dt):
+    m_dt.now.return_value = datetime.datetime.fromtimestamp(1455390419)
+
+    # Magic: http://www.voidspace.org.uk/python/mock/examples.html#partial-mocking
+    m_dt.side_effect = lambda *args, **kw: date(*args, **kw)
+
+    example = {'start_absolute': 1234567890000}
+    s, e = get_needed_absolute_time_range(example)
+    assert e is None
+    assert s == datetime.datetime.fromtimestamp(1234567890)
+
+    example = {'start_absolute': 1234567890000, 'end_absolute': 1234657890000}
+    s, e = get_needed_absolute_time_range(example)
+    assert s == datetime.datetime.fromtimestamp(1234567890)
+    assert e == datetime.datetime.fromtimestamp(1234657890)
+
+    example = {
+               'start_relative': {'value': '1', 'unit': 'hours'},
+               'end_relative': {'value': '1', 'unit': 'minutes'}
+              }
+    s, e = get_needed_absolute_time_range(example)
+    assert s == datetime.datetime.now() - datetime.timedelta(hours=1)
+    assert e == datetime.datetime.now() - datetime.timedelta(minutes=1)
