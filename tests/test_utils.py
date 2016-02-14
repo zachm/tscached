@@ -76,7 +76,7 @@ def test_get_needed_absolute_time_range(m_dt):
     m_dt.now.return_value = datetime.datetime.fromtimestamp(1455390419)
 
     # Magic: http://www.voidspace.org.uk/python/mock/examples.html#partial-mocking
-    m_dt.side_effect = lambda *args, **kw: date(*args, **kw)
+    m_dt.side_effect = lambda *args, **kw: datetime.datetime(*args, **kw)
 
     example = {'start_absolute': 1234567890000}
     s, e = get_needed_absolute_time_range(example)
