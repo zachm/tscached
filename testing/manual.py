@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import datetime
+import os
 
 import requests
 import simplejson as json
@@ -17,7 +18,7 @@ import simplejson as json
 
 
 def load_example_data(filepath):
-    with open(filepath, 'r') as f:
+    with open(os.path.abspath(filepath), 'r') as f:
         return json.loads(f.read())
 
 
@@ -73,7 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('--verb', type=str, default='POST', help='GET or POST (default)')
     parser.add_argument('--analysis', action='store_true', default=False,
                         help='Run a summarize routine instead of barfing JSON.')
-    parser.add_argument('--request', type=str, default='example_data/simple_query_request.json',
+    parser.add_argument('--request', type=str, default='testing/example_data/simple_query_request.json',
                         help='Use a different query, specify as JSON-formatted file.')
     args = parser.parse_args()
 
