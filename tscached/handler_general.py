@@ -6,6 +6,7 @@ from flask import request
 import redis
 
 from tscached import app
+from tscached import cache_calls
 from tscached.kquery import KQuery
 from tscached.mts import MTS
 from tscached.utils import populate_time_range
@@ -45,33 +46,12 @@ def handle_query():
         kq_result = kquery.get_cached()
         response_kquery = {'results': [], 'sample_size': 0}
         if not kq_result:
-            # Cold / Miss
-            logging.info('KQuery is COLD')
-
-            kairos_result = kquery.proxy_to_kairos(CONF_DICT['kairosdb']['host'],
-                                                   CONF_DICT['kairosdb']['port'],
-                                                   kairos_time_range)
-            pipeline = redis_client.pipeline()
-            # Loop over every MTS
-            for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
-                kquery.add_mts(mts)
-                # mts.upsert()
-                pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
-                response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
-
-            result = pipeline.execute()
-            success_count = len(filter(lambda x: x is True, result))
-            logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
-
-            kquery.upsert()
-            response['queries'].append(response_kquery)
+            cold_resp = cache_calls.cold(CONF_DICT, redis_client, kquery, kairos_time_range)
+            response['queries'].append(cold_resp)
 
         elif not kquery.is_stale(kairos_time_range, kq_result['last_modified']):
-            # Hot / Hit
-            logging.info("KQuery is HOT")
-            for mts in MTS.from_cache(kq_result['mts_keys'], redis_client):
-                response_kquery = mts.build_response(kairos_time_range, response_kquery)
-            response['queries'].append(response_kquery)
+            hot_resp = cache_calls.hot(redis_client, kq_result['mts_keys'], kairos_time_range)
+            response['queries'].append(hot_resp)
 
         else:
             # Warm / Stale
