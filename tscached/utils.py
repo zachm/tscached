@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import logging
 
 import requests
 import simplejson as json
@@ -69,3 +70,35 @@ def get_needed_absolute_time_range(time_range):
         end = None
 
     return (start, end)
+
+
+def get_range_needed(start_request, end_request, kq_result):
+    if not end_request:
+        end_request = datetime.datetime.now()
+
+    if kq_result:
+        last_add_data = datetime.datetime.fromtimestamp(int(kq_result['last_add_data']))
+        earliest_data = datetime.datetime.fromtimestamp(int(kq_result['earliest_data']))
+    else:
+        return (start_request, end_request, 'overwrite')
+    have_earliest = False
+    have_latest = False
+    if earliest_data <= start_request:
+        have_earliest = True
+    if last_add_data >= end_request:
+        have_latest = True
+
+    if have_earliest and have_latest:
+        # woo! we got it all!
+        return False
+    elif have_earliest and not have_latest:
+        # we have early data, but not all recent data (TODO staleness)
+        if (end_request - last_add_data) < datetime.timedelta(seconds=10):
+            return False
+        return (last_add_data, end_request, 'append')
+    elif not have_earliest and have_latest:
+        # we have all recent data, but not earlier data
+        return (start_request, earliest_data, 'prepend')
+    else:
+        # we have no data, or only a small amount in the middle that we will overwrite.
+        return (start_request, end_request, 'overwrite')
