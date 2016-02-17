@@ -15,8 +15,10 @@ class DataCache(object):
         self.cache_type = cache_type
 
     def get_cached(self):
-        """ Does this entry exist in our cache? result/False. """
-        return self.process_cached_data(self.redis_client.get(self.get_key()))
+        """ Does this entry exist in our cache? result/False. Keep a reference too. """
+        #  TODO test that we keep a reference.
+        self.cached_data = self.process_cached_data(self.redis_client.get(self.get_key()))
+        return self.cached_data
 
     def process_cached_data(self, result):
         """ Abstracted from get_cached because of pipelining. """

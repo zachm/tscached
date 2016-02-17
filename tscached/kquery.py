@@ -34,10 +34,8 @@ class KQuery(DataCache):
         proxy_query = copy.deepcopy(time_range)
         proxy_query['metrics'] = [self.query]
         proxy_query['cache_time'] = 0
-        logging.debug(str(proxy_query))
         kairos_result = query_kairos(host, port, proxy_query)
 
-        logging.debug(str(kairos_result))
         if len(kairos_result['queries']) != 1:
             logging.error("Proxy expected 1 KQuery result, found %d" % len(kairos_result['queries']))
         return kairos_result

@@ -51,18 +51,14 @@ def handle_query():
         range_needed = get_range_needed(start_request, end_request, kq_result)
         if not range_needed:
             # hot / hit
-            kq_resp = cache_calls.hot(redis_client, kq_result['mts_keys'], kairos_time_range)
+            kq_resp = cache_calls.hot(redis_client, kquery, kairos_time_range)
         elif range_needed[2] == 'overwrite':
             if kq_result:
                 logging.info('Odd COLD scenario: data exists.')
             # cold / miss
             kq_resp = cache_calls.cold(CONF_DICT, redis_client, kquery, kairos_time_range)
-        elif range_needed[2] == 'append':
+        elif range_needed[2] in ['append', 'prepend']:
             # warm / stale
-            kq_resp = cache_calls.warm(CONF_DICT, redis_client, kquery, kq_result, kairos_time_range, range_needed)
-        elif range_needed[2] == 'prepend':
-            pass
-            logging.error('Prepending not implemented yet!')
-            kq_resp = []
+            kq_resp = cache_calls.warm(CONF_DICT, redis_client, kquery, kairos_time_range, range_needed)
         response['queries'].append(kq_resp)
     return json.dumps(response)
