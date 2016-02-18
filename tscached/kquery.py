@@ -1,7 +1,6 @@
 import copy
 import datetime
 import logging
-import time
 
 from datacache import DataCache
 from utils import query_kairos
@@ -46,10 +45,10 @@ class KQuery(DataCache):
         self.query['mts_keys'] = [x.get_key() for x in self.related_mts]
         # Use as a sentinel to check for WARM vs HOT
         if end_time:
-            self.query['last_add_data'] = end_time.strftime('%s')
+            self.query['last_add_data'] = int(end_time.strftime('%s'))
         else:
-            self.query['last_add_data'] = datetime.datetime.now().strftime('%s')
-        self.query['earliest_data'] = start_time.strftime('%s')
+            self.query['last_add_data'] = int(datetime.datetime.now().strftime('%s'))
+        self.query['earliest_data'] = int(start_time.strftime('%s'))
         self.set_cached(self.query)
 
     def add_mts(self, mts):

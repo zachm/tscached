@@ -8,7 +8,6 @@ import redis
 from tscached import app
 from tscached import cache_calls
 from tscached.kquery import KQuery
-from tscached.mts import MTS
 from tscached.utils import populate_time_range
 from tscached.utils import get_needed_absolute_time_range
 from tscached.utils import get_range_needed

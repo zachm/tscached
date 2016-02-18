@@ -1,5 +1,8 @@
+import datetime
+import time
 from types import GeneratorType
 
+from freezegun import freeze_time
 from mock import patch
 
 from testing.mock_redis import MockRedis
@@ -52,8 +55,9 @@ def test_proxy_to_kairos(m_query_kairos):
     m_query_kairos.assert_called_once_with('localhost', 8080, called_query)
 
 
-@patch('tscached.kquery.time.time', autospec=True, return_value=1234567890)
-def test_upsert(m_time):
+@freeze_time("2016-01-01 00:00:00", tz_offset=-8)
+def test_upsert():
+
     class FakeMTS():
         def get_key(self):
             return 'rick-and-morty'
@@ -62,13 +66,16 @@ def test_upsert(m_time):
     kq = KQuery(redis_cli)
     kq.query = {'hello': 'some_query'}
     kq.add_mts(FakeMTS())
-    kq.upsert()
+    kq.upsert(datetime.datetime.fromtimestamp(1234567890), None)
     assert redis_cli.set_call_count == 1
     assert redis_cli.get_call_count == 0
     assert kq.query['mts_keys'] == ['rick-and-morty']
-    assert kq.query['last_modified'] == 1234567890000
-    assert sorted(kq.query.keys()) == ['hello', 'last_modified', 'mts_keys']
+    assert kq.query['last_add_data'] == time.time()
+    assert kq.query['earliest_data'] == 1234567890
+    assert sorted(kq.query.keys()) == ['earliest_data', 'hello', 'last_add_data', 'mts_keys']
 
-
-def test_is_stale():
-    pass
+    kq.upsert(datetime.datetime.fromtimestamp(1234567890), datetime.datetime.fromtimestamp(1234569890))
+    assert redis_cli.set_call_count == 2
+    assert redis_cli.get_call_count == 0
+    assert kq.query['last_add_data'] == 1234569890
+    assert kq.query['earliest_data'] == 1234567890

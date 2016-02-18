@@ -100,7 +100,5 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
     success_count = len(filter(lambda x: x is True, result))
     logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
-    kquery.upsert(new_start_time, new_end_time)  ## TODO this is where we break.
+    kquery.upsert(new_start_time, new_end_time)
     return response_kquery
-
-
