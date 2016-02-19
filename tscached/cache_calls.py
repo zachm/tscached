@@ -4,6 +4,8 @@ import logging
 import simplejson as json
 
 from tscached.mts import MTS
+from tscached.utils import FETCH_AFTER
+from tscached.utils import FETCH_BEFORE
 from tscached.utils import get_needed_absolute_time_range
 
 
@@ -48,7 +50,7 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
         kquery: KQuery, generated from the client's request. get_cached was already called.
         kairos_time_range: dict, contents some subset of '{start,end}_{relative,absolute}'
         range_needed: describes kairos data needed to make cache complete for this request.
-                      3-tuple (datetime start, datetime end, str[append,prepend])
+                      3-tuple (datetime start, datetime end, const<str>[FETCH_BEFORE, FETCH_AFTER])
     """
     logging.info('KQuery is WARM')
 
@@ -83,10 +85,10 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
             pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
             response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
         else:
-            if range_needed[2] == 'append':
+            if range_needed[2] == FETCH_AFTER:
                 new_end_time = range_needed[1]
                 old_mts.merge_from(mts, is_newer=True)
-            elif range_needed[2] == 'prepend':
+            elif range_needed[2] == FETCH_BEFORE:
                 new_start_time = range_needed[0]
                 old_mts.merge_from(mts, is_newer=False)
             else:

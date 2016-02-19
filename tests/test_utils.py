@@ -3,9 +3,15 @@ from mock import patch
 import pytest
 import simplejson as json
 
+from freezegun import freeze_time
+
+from tscached.utils import FETCH_AFTER
+from tscached.utils import FETCH_ALL
+from tscached.utils import FETCH_BEFORE
 from tscached.utils import create_key
 from tscached.utils import get_timedelta
 from tscached.utils import get_needed_absolute_time_range
+from tscached.utils import get_range_needed
 from tscached.utils import populate_time_range
 from tscached.utils import query_kairos
 
@@ -95,3 +101,30 @@ def test_get_needed_absolute_time_range(m_dt):
     s, e = get_needed_absolute_time_range(example)
     assert s == datetime.datetime.now() - datetime.timedelta(hours=1)
     assert e == datetime.datetime.now() - datetime.timedelta(minutes=1)
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_get_range_needed():
+
+    now = datetime.datetime.now()
+
+    def past(mins):
+        return now - datetime.timedelta(minutes=mins)
+
+    # Test broken cache data, and cache miss.
+    assert get_range_needed(past(60), None, None, now) == (past(60), now, FETCH_ALL)
+
+    # Test for hot cache: Cache has [-60, -5], Request wants [-30, -10].
+    assert get_range_needed(past(30), past(10), past(60), past(5)) is False
+
+    # Test for "stale-but-not-stale-enough": with 2 min expiry: cache [-60, -1]; request [-60, 0].
+    assert get_range_needed(past(60), None, past(60), past(1), 120) is False
+
+    # Test for too-stale (append): same test as above, but 30 second threshold.
+    assert get_range_needed(past(60), None, past(60), past(1), 30) == (past(1), now, FETCH_AFTER)
+
+    # Test for new-enough but missing old data (prepend): cache has 30m, user wants 2h.
+    assert get_range_needed(past(120), now, past(30), now, 10) == (past(120), past(30), FETCH_BEFORE)
+
+    # Test for data in middle, but missing beginning *and* end: cached [-20, -10], request [-30, 0].
+    assert get_range_needed(past(30), None, past(20), past(10)) == (past(30), now, FETCH_ALL)

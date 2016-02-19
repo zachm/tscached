@@ -1,3 +1,4 @@
+import datetime
 import logging
 import simplejson as json
 import yaml
@@ -8,6 +9,9 @@ import redis
 from tscached import app
 from tscached import cache_calls
 from tscached.kquery import KQuery
+from tscached.utils import FETCH_AFTER
+from tscached.utils import FETCH_ALL
+from tscached.utils import FETCH_BEFORE
 from tscached.utils import populate_time_range
 from tscached.utils import get_needed_absolute_time_range
 from tscached.utils import get_range_needed
@@ -47,17 +51,36 @@ def handle_query():
     # HTTP request may contain one or more kqueries
     for kquery in KQuery.from_request(payload, redis_client):
         kq_result = kquery.get_cached()
-        range_needed = get_range_needed(start_request, end_request, kq_result)
-        if not range_needed:
-            # hot / hit
-            kq_resp = cache_calls.hot(redis_client, kquery, kairos_time_range)
-        elif range_needed[2] == 'overwrite':
-            if kq_result:
+
+        if kq_result:
+            try:
+                start_cache = datetime.datetime.fromtimestamp(float(kq_result['earliest_data']))
+                end_cache = datetime.datetime.fromtimestamp(float(kq_result['last_add_data']))
+            except:
+                # some sort of cache malformation or error
+                start_cache = None
+                end_cache = None
+            staleness_threshold = 10  # TODO static lookup in config
+            range_needed = get_range_needed(start_request, end_request, start_cache,
+                                            end_cache, staleness_threshold)
+            merge_method = range_needed[2]
+            if not range_needed:
+                # hot / hit
+                kq_resp = cache_calls.hot(redis_client, kquery, kairos_time_range)
+            elif merge_method == FETCH_ALL:
                 logging.info('Odd COLD scenario: data exists.')
-            # cold / miss
+                # cold / miss
+                kq_resp = cache_calls.cold(CONF_DICT, redis_client, kquery, kairos_time_range)
+            elif merge_method in [FETCH_BEFORE, FETCH_AFTER]:
+                # warm / stale
+                kq_resp = cache_calls.warm(CONF_DICT, redis_client, kquery, kairos_time_range,
+                                           range_needed)
+            else:
+                logging.error("Received an unsupported range_needed value: %s" % range_needed[2])
+                kq_resp = {}
+        else:
+            # complete redis miss: cold
             kq_resp = cache_calls.cold(CONF_DICT, redis_client, kquery, kairos_time_range)
-        elif range_needed[2] in ['append', 'prepend']:
-            # warm / stale
-            kq_resp = cache_calls.warm(CONF_DICT, redis_client, kquery, kairos_time_range, range_needed)
+
         response['queries'].append(kq_resp)
     return json.dumps(response)

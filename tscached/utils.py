@@ -17,6 +17,12 @@ SECONDS_IN_UNIT = {
                   }
 
 
+# constants used in get_range_needed
+FETCH_BEFORE = 'prepend'
+FETCH_AFTER = 'append'
+FETCH_ALL = 'overwrite'
+
+
 def get_timedelta(value):
     """ input has keys value, unit. common inputs noted start_relative, end_relative """
     seconds = int(value['value']) * SECONDS_IN_UNIT[value['unit']]
@@ -71,33 +77,40 @@ def get_needed_absolute_time_range(time_range):
     return (start, end)
 
 
-def get_range_needed(start_request, end_request, kq_result):
+def get_range_needed(start_request, end_request, start_cache, end_cache, staleness_threshold=10):
+    """ What range of data should be proxied to KairosDB?
+        start_request: datetime, earliest data the user requested
+        end_request: datetime, latest data the user requested
+        start_cache: datetime, earliest data known by redis KQuery repn.
+        end_cache: datetime, latest data known by redis KQuery repn.
+        staleness_threshold: int, # of seconds we should serve stale data for. Used for throttling.
+        Returns: one of two scenarios
+            3-tuple: (datetime start_proxy, datetime end_proxy, str type_of_update).
+            False: no action needed; data we have is enough (or > enough) to fulfill the request.
+    """
     if not end_request:
         end_request = datetime.datetime.now()
 
-    if kq_result:
-        last_add_data = datetime.datetime.fromtimestamp(int(kq_result['last_add_data']))
-        earliest_data = datetime.datetime.fromtimestamp(int(kq_result['earliest_data']))
-    else:
-        return (start_request, end_request, 'overwrite')
+    if not start_cache or not end_cache:
+        return (start_request, end_request, FETCH_ALL)
     have_earliest = False
     have_latest = False
-    if earliest_data <= start_request:
+    if start_cache <= start_request:
         have_earliest = True
-    if last_add_data >= end_request:
+    if end_cache >= end_request:
         have_latest = True
 
     if have_earliest and have_latest:
         # woo! we got it all!
         return False
     elif have_earliest and not have_latest:
-        # we have early data, but not all recent data (TODO staleness)
-        if (end_request - last_add_data) < datetime.timedelta(seconds=10):
+        # we have early data, but not all recent data. compare to staleness threshold.
+        if (end_request - end_cache) < datetime.timedelta(seconds=staleness_threshold):
             return False
-        return (last_add_data, end_request, 'append')
+        return (end_cache, end_request, FETCH_AFTER)
     elif not have_earliest and have_latest:
         # we have all recent data, but not earlier data
-        return (start_request, earliest_data, 'prepend')
+        return (start_request, start_cache, FETCH_BEFORE)
     else:
         # we have no data, or only a small amount in the middle that we will overwrite.
-        return (start_request, end_request, 'overwrite')
+        return (start_request, end_request, FETCH_ALL)
