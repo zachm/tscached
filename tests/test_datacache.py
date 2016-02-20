@@ -5,7 +5,7 @@ from tscached.datacache import DataCache
 
 
 @patch('tscached.datacache.create_key', autospec=True)
-def test_datacache(m_create_key):
+def datacache(m_create_key):
     m_create_key.return_value = 'some-redis-key'
 
     redis_cli = MockRedis()

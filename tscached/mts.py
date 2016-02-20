@@ -6,11 +6,10 @@ from utils import get_needed_absolute_time_range
 
 class MTS(DataCache):
 
-    expiry = 10800  # three hours
-    result = None
-
     def __init__(self, redis_client):
         super(MTS, self).__init__(redis_client, 'mts')
+        self.expiry = 10800  # three hours
+        self.result = None
 
     @classmethod
     def from_result(cls, results, redis_client):

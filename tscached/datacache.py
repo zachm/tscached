@@ -6,11 +6,11 @@ from utils import create_key
 
 
 class DataCache(object):
-    redis_key = None  # set in make_key
-    cache_type = None
-    redis_client = None
-
     def __init__(self, redis_client, cache_type):
+        self.redis_key = None  # set in make_key
+        self.cache_type = None
+        self.redis_client = None
+
         self.redis_client = redis_client
         self.cache_type = cache_type
 
