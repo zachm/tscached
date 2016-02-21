@@ -87,10 +87,10 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
         else:
             if range_needed[2] == FETCH_AFTER:
                 new_end_time = range_needed[1]
-                old_mts.merge_from(mts, is_newer=True)
+                old_mts.merge_at_end(mts)
             elif range_needed[2] == FETCH_BEFORE:
                 new_start_time = range_needed[0]
-                old_mts.merge_from(mts, is_newer=False)
+                old_mts.merge_at_beginning(mts)
             else:
                 logging.error("WARM is not equipped for this range_needed attrib: %s" % range_needed[2])
                 return response_kquery
