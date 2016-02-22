@@ -86,3 +86,42 @@ def test_upsert():
     assert redis_cli.set_call_count == 1
     assert redis_cli.get_call_count == 0
     assert redis_cli.set_parms == [['hello-key', json.dumps(MTS_CARDINALITY), {'ex': 10800}]]
+
+
+def test_merge_at_end():
+    initials = [
+                [1234567890000, 10], [1234567900000, 11], [1234567910000, 12], [1234567920000, 13],
+                [1234567930000, 14], [1234567940000, 15], [1234567950000, 16], [1234567960000, 17],
+                [1234567970000, 18], [1234567980000, 19], [1234567990000, 20]
+               ]
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    # common case, data doesn't overlap
+    mts.result = {'values': copy.deepcopy(initials)}
+    new_mts.result = {'values': [[1234568000000, 21]]}
+    mts.merge_at_end(new_mts)
+    assert len(mts.result['values']) == 12
+    assert mts.result['values'][0] == [1234567890000, 10]
+    assert mts.result['values'][11] == [1234568000000, 21]
+
+    # single overlapping point - make sure the new_mts version is favored
+    mts.result = {'values': copy.deepcopy(initials)[:-1]}
+    new_mts.result = {'values': [[1234567990000, 999], [1234568000000, 21]]}
+    mts.merge_at_end(new_mts)
+    assert len(mts.result['values']) == 12
+    assert mts.result['values'][-2:] == [[1234567990000, 999], [1234568000000, 21]]
+
+    # trying to overmerge with a ton of duplicate data.
+    mts.result = {'values': copy.deepcopy(initials)}
+    new_mts.result = {'values': copy.deepcopy(initials)}
+    mts.merge_at_end(new_mts)
+    assert len(mts.result['values']) == 11
+    assert mts.result['values'] == initials
+
+    mts.result = {'values': copy.deepcopy(initials)}
+    new_mts.result = {'values': [[1234567980000, 19.5], [1234567990000, 20.5], [1234568010000, 25]]}
+    mts.merge_at_end(new_mts)
+    assert len(mts.result['values']) == 12
+    assert mts.result['values'] == initials + [[1234568010000, 25]]

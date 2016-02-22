@@ -52,14 +52,13 @@ class MTS(DataCache):
         """
         ctr = 0
         while True:
-            # compare newest timestamp to eldest timestamp in extension.
-            # we take preference on the cached data.
+            # if the last cached value happened before the first given value...
             if self.result['values'][-1][0] < new_mts.result['values'][ctr][0]:
                 break
             ctr += 1
             # arbitrary cutoff
-            if ctr > 10:
-                logging.error('Could not conduct merge: %s' % self.get_key())
+            if ctr > 10 or ctr >= len(new_mts.result['values']):
+                logging.error('Could not conduct merge; not updating: %s' % self.get_key())
                 return
         if ctr > 0:
             logging.debug('Trimmed %d values from new update on MTS %s' % (ctr, self.get_key()))
@@ -79,7 +78,7 @@ class MTS(DataCache):
             ctr -= 1
             # arbitrary cutoff
             if ctr < -10:
-                logging.error('Could not conduct merge: %s' % self.get_key())
+                logging.error('Could not conduct merge; not updating: %s' % self.get_key())
                 return
         if ctr == -1:
             self.result['values'] = new_mts.result['values'] + self.result['values']
