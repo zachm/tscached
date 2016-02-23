@@ -45,48 +45,61 @@ class MTS(DataCache):
     def upsert(self):
         self.set_cached(self.result)
 
-    def merge_at_end(self, new_mts):
-        """ Merge data from KairosDB, after existing cached data.
-                This assumes the MTS match on cardinality.
-                This does not write back to Redis (call upsert().)
-        """
-        ctr = 0
+    def merge_at_end(self, new_mts, cutoff=10):
+        """ Append one MTS to the end of another. Remove up to cutoff values from end of cached MTS. """
+        reverse_offset = -1
+        first_new_ts = new_mts.result['values'][0][0]
         while True:
-            # if the last cached value happened before the first given value...
-            if self.result['values'][-1][0] < new_mts.result['values'][ctr][0]:
-                break
-            ctr += 1
-            # arbitrary cutoff
-            if ctr > 10 or ctr >= len(new_mts.result['values']):
-                logging.error('Could not conduct merge; not updating: %s' % self.get_key())
-                return
-        if ctr > 0:
-            logging.debug('Trimmed %d values from new update on MTS %s' % (ctr, self.get_key()))
-        self.result['values'].extend(new_mts.result['values'][ctr:])
 
-    def merge_at_beginning(self, new_mts):
-        """ Merge data from KairosDB, before existing cached data.
-                This assumes the MTS match on cardinality.
-                This does not write back to Redis (call upsert().)
-        """
-        ctr = -1
-        while True:
-            # compare eldest timestamp to newest timestamp in extension.
-            # we take preference on the cached data.
-            if self.result['values'][0][0] > new_mts.result['values'][ctr][0]:
-                break
-            ctr -= 1
-            # arbitrary cutoff
-            if ctr < -10:
-                logging.error('Could not conduct merge; not updating: %s' % self.get_key())
+            # in rare occasions the cached data is too short. delete it.
+            if reverse_offset * -1 > len(self.result['values']):
+                self.result['values'] = new_mts.result['values']
                 return
-        if ctr == -1:
-            self.result['values'] = new_mts.result['values'] + self.result['values']
-        elif ctr < -1:
-            logging.debug('Trimmed %d values from old update on MTS %s' % (ctr, self.get_key()))
-            self.result['values'] = new_mts.result['values'][ctr] + self.result['values']
+
+            old_ts_at_offset = self.result['values'][reverse_offset][0]
+            if old_ts_at_offset < first_new_ts:
+                break
+
+            if reverse_offset < cutoff * -1:
+                logging.debug('Could not merge_at_end; not updating: %s' % self.get_key())
+                return
+            reverse_offset -= 1
+
+        # last cached value is older than first new value
+        if reverse_offset == -1:
+            self.result['values'].extend(new_mts.result['values'])
         else:
-            logging.error('Backfill somehow had a positive offset!')
+            logging.debug('Sliced %d outdated values from end of cache: MTS %s' %
+                          (reverse_offset, self.get_key()))
+            self.result['values'] = self.result['values'][:reverse_offset + 1] + new_mts.result['values']
+
+    def merge_at_beginning(self, new_mts, cutoff=10):
+        """ Append new_mts to the beginning of this one.
+            Remove up to cutoff values from beginning of cached MTS if they conflict.
+            May raise IndexError if merge fails.
+        """
+        forward_offset = 0
+        last_new_ts = new_mts.result['values'][-1][0]
+        while True:
+            # in rare occasions the cached data is too short. delete it.
+            if forward_offset >= len(self.result['values']):
+                self.result['values'] = new_mts.result['values']
+                return
+
+            old_ts_at_offset = self.result['values'][forward_offset][0]
+            if old_ts_at_offset > last_new_ts:
+                break
+
+            if forward_offset >= cutoff:
+                logging.debug('Could not merge_at_beginning; not updating: %s' % self.get_key())
+                return
+            forward_offset += 1
+
+        if forward_offset > 1:
+            logging.debug('Sliced %d outdated values from beginning of cache: MTS %s' %
+                          (forward_offset, self.get_key()))
+        logging.debug('COMPLETED!!!')
+        self.result['values'] = new_mts.result['values'] + self.result['values'][forward_offset:]
 
     def trim(self, start, end=None):
         """ Return a subset of the MTS to give back to the user.

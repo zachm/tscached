@@ -1,16 +1,16 @@
 import copy
-import datetime
-import time
 from types import GeneratorType
 
-from freezegun import freeze_time
-from mock import patch
 import simplejson as json
 
 from testing.mock_redis import MockRedis
 from tscached.mts import MTS
-from tscached.kquery import KQuery  # TODO remove
 
+
+INITIAL_MTS_DATA = [
+                    [789, 10], [790, 11], [791, 12], [792, 13], [793, 14], [794, 15],
+                    [795, 16], [796, 17], [797, 18], [798, 19], [799, 20]
+                   ]
 
 MTS_CARDINALITY = {
                     'tags': {'ecosystem': ['dev'], 'hostname': ['dev1']},
@@ -56,19 +56,25 @@ def test_from_cache():
     assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
 
 
-def test_key_basis():
-    # simple case
+def test_key_basis_simple():
+    """ simple case """
     mts = MTS(MockRedis())
     mts.result = MTS_CARDINALITY
     assert mts.key_basis() == MTS_CARDINALITY
 
-    # key_basis should remove data not explicitly included
+
+def test_key_basis_removes_bad_data():
+    """ should remove data not explicitly included """
+    mts = MTS(MockRedis())
     cardinality_with_bad_data = copy.deepcopy(MTS_CARDINALITY)
     cardinality_with_bad_data['something-irrelevant'] = 'whatever'
     mts.result = cardinality_with_bad_data
     assert mts.key_basis() == MTS_CARDINALITY
 
-    # key_basis should not include keys that aren't set
+
+def test_key_basis_no_unset_keys():
+    """ should not include keys that aren't set """
+    mts = MTS(MockRedis())
     mts_cardinality = copy.deepcopy(MTS_CARDINALITY)
     del mts_cardinality['group_by']
     mts.result = mts_cardinality
@@ -88,40 +94,97 @@ def test_upsert():
     assert redis_cli.set_parms == [['hello-key', json.dumps(MTS_CARDINALITY), {'ex': 10800}]]
 
 
-def test_merge_at_end():
-    initials = [
-                [1234567890000, 10], [1234567900000, 11], [1234567910000, 12], [1234567920000, 13],
-                [1234567930000, 14], [1234567940000, 15], [1234567950000, 16], [1234567960000, 17],
-                [1234567970000, 18], [1234567980000, 19], [1234567990000, 20]
-               ]
+def test_merge_at_end_no_overlap():
+    """ common case, data doesn't overlap """
     mts = MTS(MockRedis())
     mts.key_basis = lambda: 'some-key-goes-here'
     new_mts = MTS(MockRedis())
 
-    # common case, data doesn't overlap
-    mts.result = {'values': copy.deepcopy(initials)}
-    new_mts.result = {'values': [[1234568000000, 21]]}
+    mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    new_mts.result = {'values': [[800, 21]]}
     mts.merge_at_end(new_mts)
-    assert len(mts.result['values']) == 12
-    assert mts.result['values'][0] == [1234567890000, 10]
-    assert mts.result['values'][11] == [1234568000000, 21]
+    assert mts.result['values'] == INITIAL_MTS_DATA + [[800, 21]]
 
-    # single overlapping point - make sure the new_mts version is favored
-    mts.result = {'values': copy.deepcopy(initials)[:-1]}
-    new_mts.result = {'values': [[1234567990000, 999], [1234568000000, 21]]}
-    mts.merge_at_end(new_mts)
-    assert len(mts.result['values']) == 12
-    assert mts.result['values'][-2:] == [[1234567990000, 999], [1234568000000, 21]]
 
-    # trying to overmerge with a ton of duplicate data.
-    mts.result = {'values': copy.deepcopy(initials)}
-    new_mts.result = {'values': copy.deepcopy(initials)}
-    mts.merge_at_end(new_mts)
-    assert len(mts.result['values']) == 11
-    assert mts.result['values'] == initials
+def test_merge_at_end_one_overlap():
+    """ single overlapping point - make sure the new_mts version is favored """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
 
-    mts.result = {'values': copy.deepcopy(initials)}
-    new_mts.result = {'values': [[1234567980000, 19.5], [1234567990000, 20.5], [1234568010000, 25]]}
+    mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    new_mts.result = {'values': [[799, 9001], [800, 21]]}
     mts.merge_at_end(new_mts)
-    assert len(mts.result['values']) == 12
-    assert mts.result['values'] == initials + [[1234568010000, 25]]
+    assert mts.result['values'][-3:] == [[798, 19], [799, 9001], [800, 21]]
+
+
+def test_merge_at_end_replaces_when_existing_data_is_short():
+    """ if we can't iterate over the cached data, and it's out of order, we replace it. """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    new_mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    mts.result = {'values': [[789, 100], [790, 110]]}
+    mts.merge_at_end(new_mts)
+    assert mts.result['values'] == INITIAL_MTS_DATA
+
+
+def test_merge_at_end_too_much_overlap():
+    """ trying to merge so much duplicate data we give up and return just the cached data """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    new_mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    mts.merge_at_end(new_mts)
+    assert mts.result['values'] == INITIAL_MTS_DATA
+
+
+def test_merge_at_beginning_no_overlap():
+    """ common case, no overlap """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    new_mts.result = {'values': [[788, 9]]}
+    mts.merge_at_beginning(new_mts)
+    assert mts.result['values'] == [[788, 9]] + INITIAL_MTS_DATA
+
+
+def test_merge_at_beginning_two_overlap():
+    """ single overlapping point - make sure the new_mts version is favored """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    new_mts.result = {'values': [[788, 9], [789, 9001], [790, 10001]]}
+    mts.merge_at_beginning(new_mts)
+    assert mts.result['values'] == [[788, 9], [789, 9001], [790, 10001]] + INITIAL_MTS_DATA[2:]
+
+
+def test_merge_at_beginning_replaces_when_existing_data_is_short():
+    """ if we can't iterate over the cached data, and it's out of order, we replace it. """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    new_mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    mts.result = {'values': [[795, 1000], [797, 1100]]}
+    mts.merge_at_beginning(new_mts)
+    assert mts.result['values'] == INITIAL_MTS_DATA
+
+
+def test_merge_at_beginning_too_much_overlap():
+    """ trying to merge so much duplicate data we give up and return just the cached data """
+    mts = MTS(MockRedis())
+    mts.key_basis = lambda: 'some-key-goes-here'
+    new_mts = MTS(MockRedis())
+
+    mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    new_mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
+    mts.merge_at_beginning(new_mts)
+    assert mts.result['values'] == INITIAL_MTS_DATA
