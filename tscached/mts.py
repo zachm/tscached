@@ -101,17 +101,38 @@ class MTS(DataCache):
         logging.debug('COMPLETED!!!')
         self.result['values'] = new_mts.result['values'] + self.result['values'][forward_offset:]
 
-    def trim(self, start, end=None):
+    def robust_trim(self, start, end=None):
+        """ This is a silly trim algorithm. Full O(n), but very robust.
+            start: datetime of range start
+            end: datetime of range end, or None if returning until NOW.
+            Returns: generator of 2-ary lists that match start, end constraints.
+        """
+        data = self.result['values']
+        start = int(start.strftime('%s'))
+        if end:
+            end = int(end.strftime('%s'))
+        for entry in data:
+            if (entry[0] / 1000) >= start:
+                if not end:
+                    yield entry
+                elif (entry[0] / 1000) <= end:
+                    yield entry
+
+    def efficient_trim(self, start, end=None):
         """ Return a subset of the MTS to give back to the user.
-            start, end are datetimes
-            We assme the MTS already contains all needed data.
+            start, end are datetimes.
+            We assume several notable things:
+            - The MTS matches the resolution given. (TODO)
+            - The MTS is consecutive; i.e., there are few or no gaps in the data.
+            - The MTS has already been fetched from Redis.
+            Given these constraints, efficient_trim represents a 5-10x speedup (indexing by offsets)
+            over robust_trim (full-text search).
         """
         RESOLUTION_SEC = 10
 
         last_ts = self.result['values'][-1][0]
         ts_size = len(self.result['values'])
         start = int(start.strftime('%s'))
-
         # (ms. difference) -> sec. difference -> 10sec. difference
         start_from_end_offset = int((last_ts - (start * 1000)) / 1000 / RESOLUTION_SEC)
         start_from_start_offset = ts_size - start_from_end_offset - 1  # off by one
@@ -135,9 +156,11 @@ class MTS(DataCache):
             trim - to trim or not to trim.
         """
         if trim:
+            # TODO implement heuristic to choose between robust_ and efficient_trim!!!
+
             start_trim, end_trim = get_needed_absolute_time_range(time_range)
             logging.debug('Trimming: %s, %s' % (start_trim, end_trim))
-            self.result['values'] = self.trim(start_trim, end_trim)
+            self.result['values'] = self.efficient_trim(start_trim, end_trim)
         response_dict['sample_size'] += len(self.result['values'])
         response_dict['results'].append(self.result)
         return response_dict
