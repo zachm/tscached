@@ -1,4 +1,5 @@
 import copy
+import datetime
 from types import GeneratorType
 
 import simplejson as json
@@ -188,3 +189,45 @@ def test_merge_at_beginning_too_much_overlap():
     new_mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
     mts.merge_at_beginning(new_mts)
     assert mts.result['values'] == INITIAL_MTS_DATA
+
+
+def test_robust_trim_no_end():
+    mts = MTS(MockRedis())
+    data = []
+    for i in xrange(1000):
+        data.append([(1234567890 + i) * 1000, 0])
+    mts.result = {'values': data}
+
+    gen = mts.robust_trim(datetime.datetime.fromtimestamp(1234567990))
+    assert len(list(gen)) == 900
+
+
+def test_robust_trim_with_end():
+    mts = MTS(MockRedis())
+    data = []
+    for i in xrange(1000):
+        data.append([(1234567890 + i) * 1000, 0])
+    mts.result = {'values': data}
+
+    gen = mts.robust_trim(datetime.datetime.fromtimestamp(1234567990),
+                          datetime.datetime.fromtimestamp(1234568290))
+    assert len(list(gen)) == 301
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
