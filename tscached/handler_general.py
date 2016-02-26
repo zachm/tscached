@@ -1,7 +1,6 @@
 import datetime
 import logging
 import simplejson as json
-import yaml
 
 from flask import request
 import redis
@@ -39,7 +38,6 @@ def handle_query():
         payload = json.loads(request.args.get('query'))
     config = app.config['tscached']
 
-
     logging.info('Query')
     redis_client = redis.StrictRedis(host=config['redis']['host'], port=config['redis']['port'])
     kairos_time_range = populate_time_range(payload)
@@ -61,21 +59,23 @@ def handle_query():
             staleness_threshold = 10  # TODO static lookup in config
             range_needed = get_range_needed(start_request, end_request, start_cache,
                                             end_cache, staleness_threshold)
-            merge_method = range_needed[2]
+
             if not range_needed:
                 # hot / hit
                 kq_resp = cache_calls.hot(redis_client, kquery, kairos_time_range)
-            elif merge_method == FETCH_ALL:
-                logging.info('Odd COLD scenario: data exists.')
-                # cold / miss
-                kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
-            elif merge_method in [FETCH_BEFORE, FETCH_AFTER]:
-                # warm / stale
-                kq_resp = cache_calls.warm(config, redis_client, kquery, kairos_time_range,
-                                           range_needed)
             else:
-                logging.error("Received an unsupported range_needed value: %s" % range_needed[2])
-                kq_resp = {}
+                merge_method = range_needed[2]
+                if merge_method == FETCH_ALL:
+                    logging.info('Odd COLD scenario: data exists.')
+                    # cold / miss
+                    kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
+                elif merge_method in [FETCH_BEFORE, FETCH_AFTER]:
+                    # warm / stale
+                    kq_resp = cache_calls.warm(config, redis_client, kquery, kairos_time_range,
+                                               range_needed)
+                else:
+                    logging.error("Received an unsupported range_needed value: %s" % range_needed[2])
+                    kq_resp = {}
         else:
             # complete redis miss: cold
             kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
