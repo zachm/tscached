@@ -65,8 +65,8 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
 
     response_kquery = {'results': [], 'sample_size': 0}
 
-    new_start_time = datetime.datetime.fromtimestamp(float(kquery.cached_data.get('last_add_data')))
-    new_end_time = datetime.datetime.fromtimestamp(float(kquery.cached_data.get('earliest_data')))
+    new_start_time = datetime.datetime.fromtimestamp(float(kquery.cached_data.get('earliest_data')))
+    new_end_time = datetime.datetime.fromtimestamp(float(kquery.cached_data.get('last_add_data')))
 
     cached_mts = {}  # redis key to MTS
     # pull in cached MTS, put them in a lookup table
