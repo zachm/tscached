@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from datacache import DataCache
@@ -8,8 +9,12 @@ class MTS(DataCache):
 
     def __init__(self, redis_client):
         super(MTS, self).__init__(redis_client, 'mts')
-        self.expiry = 10800  # three hours
         self.result = None
+
+        # TODO make these configurable
+        self.expiry = 10800  # three hours
+        self.acceptable_skew = 6
+        self.expected_resolution = 10
 
     @classmethod
     def from_result(cls, results, redis_client):
@@ -128,13 +133,12 @@ class MTS(DataCache):
             Given these constraints, efficient_trim represents a 5-10x speedup (indexing by offsets)
             over robust_trim (full-text search).
         """
-        RESOLUTION_SEC = 10
 
         last_ts = self.result['values'][-1][0]
         ts_size = len(self.result['values'])
         start = int(start.strftime('%s'))
         # (ms. difference) -> sec. difference -> 10sec. difference
-        start_from_end_offset = int((last_ts - (start * 1000)) / 1000 / RESOLUTION_SEC)
+        start_from_end_offset = int((last_ts - (start * 1000)) / 1000 / self.expected_resolution)
         start_from_start_offset = ts_size - start_from_end_offset - 1  # off by one
 
         if not end:
@@ -143,24 +147,50 @@ class MTS(DataCache):
             return self.result['values'][start_from_start_offset:]
 
         end = int(end.strftime('%s'))
-        end_from_end_offset = int((last_ts - (end * 1000)) / 1000 / RESOLUTION_SEC)
+        end_from_end_offset = int((last_ts - (end * 1000)) / 1000 / self.expected_resolution)
         end_from_start_offset = ts_size - end_from_end_offset
         logging.debug('Trimming (mid value): start_from_end is %d, end_from_end is %d' %
                       (start_from_end_offset, end_from_end_offset))
         return self.result['values'][start_from_start_offset:end_from_start_offset]
 
+    def conforms_to_efficient_constraints(self):
+        """ Can we use the efficient trim strategy? returns boolean. """
+        first_ts = self.result['values'][0][0]
+        last_ts = self.result['values'][-1][0]
+        count = len(self.result['values'])
+
+        # elapsed ms -> elapsed seconds -> downsampling based on configured resolution
+        expected_count = (last_ts - first_ts) / 1000 / self.expected_resolution
+        # how the number of points we have differs from what our 'perfect world' would have
+        observed_skew = abs(expected_count - count)
+        if observed_skew <= self.acceptable_skew:
+            return True
+        return False
+
     def build_response(self, time_range, response_dict, trim=True):
-        """ Mutates internal state and returns it as a dict.
+        """ TODO should refactor this to a better pattern.
+            Mutates internal state and returns it as a dict.
             This should be the last method called in the lifecycle of MTS objects.
             response_dict - the accumulator.
             trim - to trim or not to trim.
         """
+        new_values = None
         if trim:
-            # TODO implement heuristic to choose between robust_ and efficient_trim!!!
-
             start_trim, end_trim = get_needed_absolute_time_range(time_range)
-            logging.debug('Trimming: %s, %s' % (start_trim, end_trim))
-            self.result['values'] = self.efficient_trim(start_trim, end_trim)
-        response_dict['sample_size'] += len(self.result['values'])
-        response_dict['results'].append(self.result)
+
+            if self.conforms_to_efficient_constraints():
+                logging.debug('Efficient trimming: %s, %s' % (start_trim, end_trim))
+                new_values = self.efficient_trim(start_trim, end_trim)
+            else:
+                logging.debug('Robust trimming: %s, %s' % (start_trim, end_trim))
+                new_values = list(self.robust_trim(start_trim, end_trim))
+
+            # shallow copy just at the first level of the dict
+            new_result = copy.copy(self.result)
+            new_result['values'] = new_values
+            response_dict['sample_size'] += len(new_result['values'])
+            response_dict['results'].append(new_result)
+        else:
+            response_dict['sample_size'] += len(self.result['values'])
+            response_dict['results'].append(self.result)
         return response_dict
