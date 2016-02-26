@@ -16,10 +16,6 @@ from tscached import app
 """
 
 
-with open('tscached.yaml', 'r') as config_file:
-    CONF = yaml.load(config_file.read())['tscached']
-
-
 def metadata_caching(config, key, endpoint):
     """ Encapsulate stupid-simple cache logic for Kairos "metadata" endpoints.
         config: dict, usually the contents of tscached.yaml.
@@ -50,14 +46,14 @@ def metadata_caching(config, key, endpoint):
 
 @app.route('/api/v1/metricnames', methods=['GET'])
 def handle_metricnames():
-    return metadata_caching(CONF, 'metricnames', '/api/v1/metricnames')
+    return metadata_caching(app.config['tscached'], 'metricnames', '/api/v1/metricnames')
 
 
 @app.route('/api/v1/tagnames', methods=['GET'])
 def handle_tagnames():
-    return metadata_caching(CONF, 'tagnames', '/api/v1/tagnames')
+    return metadata_caching(app.config['tscached'], 'tagnames', '/api/v1/tagnames')
 
 
 @app.route('/api/v1/tagvalues', methods=['GET'])
 def handle_tagvalues():
-    return metadata_caching(CONF, 'tagvalues', '/api/v1/tagvalues')
+    return metadata_caching(app.config['tscached'], 'tagvalues', '/api/v1/tagvalues')
