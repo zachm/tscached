@@ -71,6 +71,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Harness for querying/testing tscached/kairosdb')
     parser.add_argument('-p', '--port', type=int, default=8080, help='port to query on (8080)')
     parser.add_argument('-s', '--server', type=str, default='localhost', help='hostname (localhost)')
+    parser.add_argument('-m', '--meta-only', action='store_true', default=False,
+                        help='Query for metadata only (uses a different endpoint).')
     parser.add_argument('--verb', type=str, default='POST', help='GET or POST (default)')
     parser.add_argument('--analysis', action='store_true', default=False,
                         help='Run a summarize routine instead of barfing JSON.')
@@ -81,7 +83,10 @@ if __name__ == '__main__':
     request = load_example_data(args.request)
     # request['start_relative'] = {'value': '1', 'unit': 'minutes'}
 
-    url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
+    if args.meta_only:
+        url = 'http://%s:%d/api/v1/datapoints/query/tags' % (args.server, args.port)
+    else:
+        url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
     if args.verb == 'POST':
         results = query_with_post(url, request)
     else:
