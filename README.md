@@ -1,6 +1,6 @@
 # tscached
 
-tscached is a smart caching proxy, built with Redis, for time series data in the KairosDB format.
+tscached is a smart caching proxy, built with Redis, for time series data in the [KairosDB](https://kairosdb.github.io/) format.
 
 Inspired by [arussellsaw/postcache](https://github.com/arussellsaw/postcache) - tscached goes one
 step further: A previously issued query will be reissued across only the elapsed time since its
