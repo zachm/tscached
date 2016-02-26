@@ -212,22 +212,3 @@ def test_robust_trim_with_end():
     gen = mts.robust_trim(datetime.datetime.fromtimestamp(1234567990),
                           datetime.datetime.fromtimestamp(1234568290))
     assert len(list(gen)) == 301
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

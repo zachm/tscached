@@ -1,5 +1,4 @@
 import logging
-import simplejson as json
 
 from flask import request
 import redis
