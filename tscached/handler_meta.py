@@ -1,6 +1,5 @@
 import logging
 import simplejson as json
-import yaml
 
 from flask import request
 import redis
@@ -18,7 +17,7 @@ from tscached import app
 
 def metadata_caching(config, key, endpoint):
     """ Encapsulate stupid-simple cache logic for Kairos "metadata" endpoints.
-        config: dict, usually the contents of tscached.yaml.
+        config: nested dict loaded from the 'tscached' section of a yaml file.
         key: string, used for redis keying.
         endpoint: string, the corresponding kairosdb endpoint.
         returns: 2-tuple: (content, HTTP code)

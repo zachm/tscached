@@ -17,10 +17,6 @@ from tscached.utils import get_needed_absolute_time_range
 from tscached.utils import get_range_needed
 
 
-with open('tscached.yaml', 'r') as config_file:
-    CONF_DICT = yaml.load(config_file.read())['tscached']
-
-
 if not app.debug:
     logger = logging.getLogger()
     handler = logging.StreamHandler()
@@ -41,9 +37,11 @@ def handle_query():
         payload = json.loads(request.data)  # dict
     else:
         payload = json.loads(request.args.get('query'))
+    config = app.config['tscached']
+
 
     logging.info('Query')
-    redis_client = redis.StrictRedis(host=CONF_DICT['redis']['host'], port=CONF_DICT['redis']['port'])
+    redis_client = redis.StrictRedis(host=config['redis']['host'], port=config['redis']['port'])
     kairos_time_range = populate_time_range(payload)
     start_request, end_request = get_needed_absolute_time_range(kairos_time_range)
     response = {'queries': []}
@@ -70,17 +68,17 @@ def handle_query():
             elif merge_method == FETCH_ALL:
                 logging.info('Odd COLD scenario: data exists.')
                 # cold / miss
-                kq_resp = cache_calls.cold(CONF_DICT, redis_client, kquery, kairos_time_range)
+                kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
             elif merge_method in [FETCH_BEFORE, FETCH_AFTER]:
                 # warm / stale
-                kq_resp = cache_calls.warm(CONF_DICT, redis_client, kquery, kairos_time_range,
+                kq_resp = cache_calls.warm(config, redis_client, kquery, kairos_time_range,
                                            range_needed)
             else:
                 logging.error("Received an unsupported range_needed value: %s" % range_needed[2])
                 kq_resp = {}
         else:
             # complete redis miss: cold
-            kq_resp = cache_calls.cold(CONF_DICT, redis_client, kquery, kairos_time_range)
+            kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
 
         response['queries'].append(kq_resp)
     return json.dumps(response)

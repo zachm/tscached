@@ -45,7 +45,7 @@ def hot(redis_client, kquery, kairos_time_range):
 
 def warm(config, redis_client, kquery, kairos_time_range, range_needed):
     """ Warm / Stale
-        config: nested dict loaded from tscached.yaml
+        config: nested dict loaded from the 'tscached' section of a yaml file.
         redis_client: redis.StrictRedis
         kquery: KQuery, generated from the client's request. get_cached was already called.
         kairos_time_range: dict, contents some subset of '{start,end}_{relative,absolute}'
