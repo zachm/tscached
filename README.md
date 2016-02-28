@@ -109,5 +109,17 @@ installation, but then queried very rarely (i.e., only under emergency scenarios
 provide *shadow load* on them all the time? This would, in effect, keep tscached current and
 result in a very high (hot) hit rate.
 
-It could be achieved with a daemon, or with cron jobs, or with various other approaches.
-Stay tuned...
+#### How to implement read-before caching
+There are many ways to achieve this: a daemon, cron jobs, etc. Here is our presumed first attempt:
+- Keep a list, in Redis, of KQueries to treat as read-before enabled.
+- Run a cron job every ~five minutes that iterates over the list of *shadow load-enabled* dashboards.
+- This cron job may simply query the tscached webapp, or use the same code to offload the work.
+- Regardless, it will keep the cached data fresh to within a given window, even without a human viewing it.
+
+#### How to know what should be read-before cached
+- It doesn't make sense to cache on KQueries solely used in *compose* operations, since the query is constantly changing.
+- Presumably those used by *saved* dashboards would benefit much more!
+- We can check the HTTP *referer* field: If it contains `/dashboard/db/` (for a Grafana frontend) then it's a saved dashboard (good). If the last characters are `edit` then it's an update of that saved dashboard (ungood).
+- If we can fully understand the schema of URLs from a given frontend, Grafana or otherwise, this strategy should work.
+- A better approach? Send an `X-tscached` header with an appropriate mode. This requires an upstream change in whichever graphing dashboard you choose to use though.
+
