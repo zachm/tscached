@@ -34,6 +34,6 @@ setup(
     install_requires=[],
 
     extras_requires={
-        'testing': ['mock'],
+        'testing': ['mock', 'freezegun'],
     },
 )

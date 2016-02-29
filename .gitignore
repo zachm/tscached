@@ -7,3 +7,6 @@ virtualenv_run
 tscached.egg-info/*
 .coverage
 htmlcov/*
+build/*
+dist/*
+debug-run.py
