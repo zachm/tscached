@@ -2,7 +2,7 @@ from flask import Flask
 import yaml
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='kairos-web')
 
 # Inject our custom YAML-based config into the Flask app.
 with open('tscached.yaml', 'r') as config_file:

@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import simplejson as json
 
 from flask import request
@@ -27,7 +28,10 @@ if not app.debug:
 
 @app.route('/', methods=['GET'])
 def handle_root():
-    return "hello world!"
+    if os.path.exists('tscached/kairos-web/index.html'):
+        return app.send_static_file('index.html')
+    return ("Welcome to tscached! If you're looking for a web frontend, try running `make frontend`"
+            " and restarting the server.")
 
 
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])

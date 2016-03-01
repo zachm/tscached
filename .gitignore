@@ -10,3 +10,5 @@ htmlcov/*
 build/*
 dist/*
 debug-run.py
+kairosdb/
+tscached/kairos-web/

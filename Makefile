@@ -7,7 +7,7 @@ PYTHONEXEC=python2.7
 DEBUGPORT=8008
 
 # builds the darn thing
-all: venv
+all: venv frontend
 
 venv/bin/activate: requirements.txt
 	test -d venv || virtualenv venv -p ${PYTHONEXEC}
@@ -26,15 +26,23 @@ cover: devbuild
 	venv/bin/tox -e coverage
 
 clean:
-	rm -rf venv debug-run.py
+	rm -rf venv debug-run.py kairosdb/ tscached/kairos-web/
 	rm -rf build/ dist/ tscached.egg-info/ htmlcov/
 	find . -name \*.pyc -delete
 
 # Run with uWSGI server, multiple workers, etc.
-run: venv
+run: venv frontend
 	source venv/bin/activate ; uwsgi --ini uwsgi.ini -H venv
 
 # Run with single-threaded debug server. Flask gives you auto-reloading on code changes for free.
-debug: venv
+debug: venv frontend
 	echo "from tscached import app; app.debug = True; app.run(host='0.0.0.0', port=${DEBUGPORT})" > debug-run.py
 	source venv/bin/activate; venv/bin/python debug-run.py
+
+# Copy the debug frontend from kairosdb into our project
+frontend: venv
+	test -d kairosdb || git clone https://github.com/kairosdb/kairosdb.git
+	test -d tscached/kairos-web || cp -R kairosdb/webroot tscached/kairos-web
+	cp logo/favicon.png tscached/kairos-web/img/favicon.png
+	cp logo/logo.png tscached/kairos-web/img/logo.png
+	cp logo/logo.png tscached/kairos-web/img/logoSmall.png
