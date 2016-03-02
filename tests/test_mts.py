@@ -102,9 +102,10 @@ def test_merge_at_end_no_overlap():
     new_mts = MTS(MockRedis())
 
     mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
-    new_mts.result = {'values': [[800, 21]]}
+    new_mts.result = {'values': [[800, 21], [801, 22]]}
     mts.merge_at_end(new_mts)
-    assert mts.result['values'] == INITIAL_MTS_DATA + [[800, 21]]
+    # throw away the last cached, first new point due to rollup windowing.
+    assert mts.result['values'] == INITIAL_MTS_DATA[:-1] + [[801, 22]]
 
 
 def test_merge_at_end_one_overlap():
@@ -114,9 +115,10 @@ def test_merge_at_end_one_overlap():
     new_mts = MTS(MockRedis())
 
     mts.result = {'values': copy.deepcopy(INITIAL_MTS_DATA)}
-    new_mts.result = {'values': [[799, 9001], [800, 21]]}
+    new_mts.result = {'values': [[799, 9001], [800, 21], [801, 22]]}
     mts.merge_at_end(new_mts)
-    assert mts.result['values'][-3:] == [[798, 19], [799, 9001], [800, 21]]
+    # throw away the last cached, first new point due to rollup windowing.
+    assert mts.result['values'][-3:] == [[798, 19], [800, 21], [801, 22]]
 
 
 def test_merge_at_end_replaces_when_existing_data_is_short():
