@@ -9,6 +9,7 @@ import redis
 from tscached import app
 from tscached import cache_calls
 from tscached.kquery import KQuery
+from tscached.shadow import process_for_readahead
 from tscached.utils import FETCH_AFTER
 from tscached.utils import FETCH_ALL
 from tscached.utils import FETCH_BEFORE
@@ -51,6 +52,9 @@ def handle_query():
     # HTTP request may contain one or more kqueries
     for kquery in KQuery.from_request(payload, redis_client):
         kq_result = kquery.get_cached()
+
+        # readahead shadow load support
+        populate_for_readahead(config, redis_client, kquery.get_key(), request.referrer, request.headers)
 
         if kq_result:
             try:
