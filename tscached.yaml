@@ -19,3 +19,8 @@ tscached:
         tagnames: 300
         tagvalues: 300
         metaquery: 300
+
+    data:
+        default_expiry: 10800  # 3 hours, in seconds
+        expected_resolution: 10000  # in milliseconds
+        acceptable_skew: 6  # for merging purposes

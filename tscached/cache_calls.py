@@ -54,9 +54,11 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
     """
     logging.info('KQuery is WARM')
 
+    expected_resolution = config['data'].get('expected_resolution', 10000)
+
     time_dict = {
                     'start_absolute': int(range_needed[0].strftime('%s')) * 1000,
-                    'end_absolute': int(range_needed[1].strftime('%s')) * 1000,
+                    'end_absolute': int(range_needed[1].strftime('%s')) * 1000 - expected_resolution,
                 }
 
     new_kairos_result = kquery.proxy_to_kairos(config['kairosdb']['host'],
@@ -70,6 +72,7 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
 
     cached_mts = {}  # redis key to MTS
     # pull in cached MTS, put them in a lookup table
+    # TODO expected_resolution should be passed in
     for mts in MTS.from_cache(kquery.cached_data.get('mts_keys', []), redis_client):
         kquery.add_mts(mts)  # we want to write these back eventually
         cached_mts[mts.get_key()] = mts

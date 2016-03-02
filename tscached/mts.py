@@ -14,7 +14,7 @@ class MTS(DataCache):
         # TODO make these configurable
         self.expiry = 10800  # three hours
         self.acceptable_skew = 6
-        self.expected_resolution = 10
+        self.expected_resolution = 10000  # in ms
 
     @classmethod
     def from_result(cls, results, redis_client):
@@ -139,8 +139,8 @@ class MTS(DataCache):
         last_ts = self.result['values'][-1][0]
         ts_size = len(self.result['values'])
         start = int(start.strftime('%s'))
-        # (ms. difference) -> sec. difference -> 10sec. difference
-        start_from_end_offset = int((last_ts - (start * 1000)) / 1000 / self.expected_resolution)
+        # (ms. difference) -> 10sec. difference
+        start_from_end_offset = int((last_ts - (start * 1000)) / self.expected_resolution)
         start_from_start_offset = ts_size - start_from_end_offset - 1  # off by one
 
         if not end:
@@ -149,7 +149,7 @@ class MTS(DataCache):
             return self.result['values'][start_from_start_offset:]
 
         end = int(end.strftime('%s'))
-        end_from_end_offset = int((last_ts - (end * 1000)) / 1000 / self.expected_resolution)
+        end_from_end_offset = int((last_ts - (end * 1000)) / self.expected_resolution)
         end_from_start_offset = ts_size - end_from_end_offset
         logging.debug('Trimming (mid value): start_from_end is %d, end_from_end is %d' %
                       (start_from_end_offset, end_from_end_offset))
@@ -161,8 +161,8 @@ class MTS(DataCache):
         last_ts = self.result['values'][-1][0]
         count = len(self.result['values'])
 
-        # elapsed ms -> elapsed seconds -> downsampling based on configured resolution
-        expected_count = (last_ts - first_ts) / 1000 / self.expected_resolution
+        # elapsed ms -> downsampling based on configured resolution
+        expected_count = (last_ts - first_ts) / self.expected_resolution
         # how the number of points we have differs from what our 'perfect world' would have
         observed_skew = abs(expected_count - count)
         if observed_skew <= self.acceptable_skew:
