@@ -6,6 +6,9 @@
 PYTHONEXEC=python2.7
 DEBUGPORT=8008
 
+# turns out 'source' isn't a thing in sh.
+SHELL=/usr/bin/env bash
+
 # builds the darn thing
 all: venv frontend
 
