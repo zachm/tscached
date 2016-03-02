@@ -24,3 +24,10 @@ tscached:
         default_expiry: 10800  # 3 hours, in seconds
         expected_resolution: 10000  # in milliseconds
         acceptable_skew: 6  # for merging purposes
+
+    shadow:  # in seconds
+        http_header_name: 'Tscached-Shadow-Load'
+        update_interval: 60  # how often to run the update script (secs)
+        leader_expiration: 120  # TTL (sec) on the leader flag - which server runs updates
+        referrer_blacklist:  # if the referrer contains any of these, do not do readahead.
+        - 'edit'
