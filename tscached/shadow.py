@@ -17,7 +17,7 @@ def should_add_to_readahead(config, referrer, headers):
     return True
 
 
-def populate_for_readahead(config, redis_client, kquery_key, referrer, headers):
+def process_for_readahead(config, redis_client, kquery_key, referrer, headers):
     """ Couple this KQuery to readahead behavior.
         config: dict representing the top-level tscached config
         redis_client: redis.StrictRedis

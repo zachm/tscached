@@ -54,7 +54,7 @@ def handle_query():
         kq_result = kquery.get_cached()
 
         # readahead shadow load support
-        populate_for_readahead(config, redis_client, kquery.get_key(), request.referrer, request.headers)
+        process_for_readahead(config, redis_client, kquery.get_key(), request.referrer, request.headers)
 
         if kq_result:
             try:

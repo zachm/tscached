@@ -7,6 +7,7 @@ class MockRedis():
         self.set_parms = []
         self.success_flag = True
         self.derived_pipeline = None
+        self.sadd_parms = []
 
     def get(self, key):
         self.get_parms.append([key])
@@ -21,6 +22,10 @@ class MockRedis():
     def pipeline(self):
         self.derived_pipeline = MockRedisPipeline()
         return self.derived_pipeline
+
+    def sadd(self, key, element):
+        self.sadd_parms.append([key, element])
+        return 1
 
 
 class MockRedisPipeline():
