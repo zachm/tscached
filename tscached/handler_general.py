@@ -45,10 +45,16 @@ def handle_query():
 
     # HTTP request may contain one or more kqueries
     for kquery in KQuery.from_request(payload, redis_client):
-        kq_result = kquery.get_cached()
+        try:
+            # get whatever is in redis for this kquery
+            kq_result = kquery.get_cached()
 
-        # readahead shadow load support
-        process_for_readahead(config, redis_client, kquery.get_key(), request.referrer, request.headers)
+            # readahead shadow load support
+            process_for_readahead(config, redis_client, kquery.get_key(), request.referrer,
+                                  request.headers)
+        except redis.exceptions.RedisError as e:
+            logging.error('RedisError: ' + e.message)
+            kq_result = False  # redis is broken so this is a cache miss.
 
         try:
             if kq_result:
