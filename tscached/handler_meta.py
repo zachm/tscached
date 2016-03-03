@@ -6,7 +6,6 @@ import requests
 import simplejson as json
 
 from tscached import app
-from tscached.utils import CacheQueryFailure
 from tscached.utils import create_key
 
 
@@ -59,7 +58,8 @@ def metadata_caching(config, name, endpoint, post_data=None):
             value = json.loads(kairos_result.text)
             value_message = ', '.join(value.get('errors', ['No message given']))
             message = 'Meta Endpoint: %s: KairosDB responded %d: %s' % (redis_key,
-                      kairos_result.status_code, message)
+                                                                        kairos_result.status_code,
+                                                                        value_message)
             return json.dumps({'error': message}), 500
         else:
             # kairos response seems to be okay

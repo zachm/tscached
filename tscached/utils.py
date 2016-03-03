@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 
-import redis
 import requests
 import simplejson as json
 
@@ -26,11 +25,6 @@ FETCH_ALL = 'overwrite'
 
 class BackendQueryFailure(requests.exceptions.RequestException):
     """ Raised if the backing TS database (KairosDB) fails. """
-    pass
-
-
-class CacheQueryFailure(redis.exceptions.RedisError):
-    """ Raised if the backing cache (Redis) fails. """
     pass
 
 
