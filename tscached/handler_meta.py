@@ -6,6 +6,7 @@ import requests
 import simplejson as json
 
 from tscached import app
+from tscached.utils import CacheQueryFailure
 from tscached.utils import create_key
 
 
@@ -30,7 +31,11 @@ def metadata_caching(config, name, endpoint, post_data=None):
         redis_key = 'tscached:' + name
 
     redis_client = redis.StrictRedis(host=config['redis']['host'], port=config['redis']['port'])
-    get_result = redis_client.get(redis_key)
+    try:
+        get_result = redis_client.get(redis_key)
+    except redis.exceptions.RedisError as e:
+        logging.error('RedisError: ' + e.message)
+        get_result = False  # proxy through to kairos even if redis is broken
 
     if get_result:  # hit. no need to process the JSON blob, so don't!
         logging.info('Meta Endpoint HIT: %s' % redis_key)
@@ -44,19 +49,30 @@ def metadata_caching(config, name, endpoint, post_data=None):
                 kairos_result = requests.post(url, data=post_data)
             else:
                 kairos_result = requests.get(url)
+
         except requests.exceptions.RequestException as e:
             logging.error('BackendQueryFailure: %s' % e.message)
             return json.dumps({'error': 'Could not connect to KairosDB: %s' % e.message}), 500
 
-        if kairos_result.status_code != 200:
+        if kairos_result.status_code / 100 != 2:
             # propagate the kairos message to the user along with its error code.
-            logging.error('Meta Endpoint: %s: got %s from kairos: %s' % (redis_key,
-                          kairos_result.status_code, kairos_result.text))
+            value = json.loads(kairos_result.text)
+            value_message = ', '.join(value.get('errors', ['No message given']))
+            message = 'Meta Endpoint: %s: KairosDB responded %d: %s' % (redis_key,
+                      kairos_result.status_code, message)
+            return json.dumps({'error': message}), 500
         else:
+            # kairos response seems to be okay
             expiry = config['expiry'].get(name, 300)  # 5 minute default
-            set_result = redis_client.set(redis_key, kairos_result.text, ex=expiry)
-            if not set_result:
-                logging.error('Meta Endpoint: %s: Cache SET failed: %s' % (redis_key, set_result))
+
+            try:
+                set_result = redis_client.set(redis_key, kairos_result.text, ex=expiry)
+                if not set_result:
+                    logging.error('Meta Endpoint: %s: Cache SET failed: %s' % (redis_key, set_result))
+            except redis.exceptions.RedisError as e:
+                # Eat the Redis exception - turns these endpoints into straight proxies.
+                logging.error('RedisError: ' + e.message)
+
         return kairos_result.text, kairos_result.status_code
 
 
