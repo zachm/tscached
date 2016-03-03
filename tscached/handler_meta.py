@@ -45,6 +45,7 @@ def metadata_caching(config, name, endpoint, post_data=None):
             else:
                 kairos_result = requests.get(url)
         except requests.exceptions.RequestException as e:
+            logging.error('BackendQueryFailure: %s' % e.message)
             return json.dumps({'error': 'Could not connect to KairosDB: %s' % e.message}), 500
 
         if kairos_result.status_code != 200:
