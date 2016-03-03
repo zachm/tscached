@@ -33,12 +33,24 @@ def test_get_timedelta():
 def test_query_kairos(mock_post):
     class Shim(object):
         text = '{"hello": true}'
+        status_code = 200
     mock_post.return_value = Shim()
 
     assert query_kairos('localhost', 8080, {'goodbye': False}) == {'hello': True}
     assert mock_post.call_count == 1
     mock_post.assert_called_once_with('http://localhost:8080/api/v1/datapoints/query',
                                       data='{"goodbye": false}')
+
+
+@patch('tscached.utils.requests.post', autospec=True)
+def test_query_kairos_backend_gives_non_200(mock_post):
+    class Shim(object):
+        text = '{"errors": ["whatever", "lol"]}'
+        status_code = 500
+    mock_post.return_value = Shim()
+    with pytest.raises(BackendQueryFailure):
+        query_kairos('localhost', 8080, {'goodbye': False})
+    assert mock_post.call_count == 1
 
 
 @patch('tscached.utils.requests.post', autospec=True)

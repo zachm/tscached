@@ -45,7 +45,11 @@ def query_kairos(kairos_host, kairos_port, query):
     try:
         url = 'http://%s:%s/api/v1/datapoints/query' % (kairos_host, kairos_port)
         r = requests.post(url, data=json.dumps(query))
-        return json.loads(r.text)
+        value = json.loads(r.text)
+        if r.status_code / 100 != 2:
+            message = ', '.join(value.get('errors', ['No message given']))
+            raise BackendQueryFailure('KairosDB responded %d: %s' % (r.status_code, message))
+        return value
     except requests.exceptions.RequestException as e:
         raise BackendQueryFailure('Could not connect to KairosDB: %s' % e.message)
 
