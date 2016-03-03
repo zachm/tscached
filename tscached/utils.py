@@ -23,6 +23,11 @@ FETCH_AFTER = 'append'
 FETCH_ALL = 'overwrite'
 
 
+class BackendQueryFailure(requests.exceptions.RequestException):
+    """ Raised if the backing TS database (KairosDB) fails. """
+    pass
+
+
 def get_timedelta(value):
     """ input has keys value, unit. common inputs noted start_relative, end_relative """
     seconds = int(value['value']) * SECONDS_IN_UNIT[value['unit']]
@@ -30,10 +35,19 @@ def get_timedelta(value):
 
 
 def query_kairos(kairos_host, kairos_port, query):
-    """ do it. """
-    url = 'http://%s:%s/api/v1/datapoints/query' % (kairos_host, kairos_port)
-    r = requests.post(url, data=json.dumps(query))
-    return json.loads(r.text)
+    """ As the name states.
+        kairos_host: str, host/fqdn of kairos server. commonly a load balancer.
+        kairos_port: int, port that kairos (or a proxy) listens on.
+        query: dict to send to kairos.
+        returns: dict containing kairos' response.
+        raises: BackendQueryFailure if the operation doesn't succeed.
+    """
+    try:
+        url = 'http://%s:%s/api/v1/datapoints/query' % (kairos_host, kairos_port)
+        r = requests.post(url, data=json.dumps(query))
+        return json.loads(r.text)
+    except requests.exceptions.RequestException as e:
+        raise BackendQueryFailure('Could not connect to KairosDB: %s' % e.message)
 
 
 def create_key(data, tipo):

@@ -5,6 +5,7 @@ import simplejson as json
 
 from freezegun import freeze_time
 
+from tscached.utils import BackendQueryFailure
 from tscached.utils import FETCH_AFTER
 from tscached.utils import FETCH_ALL
 from tscached.utils import FETCH_BEFORE
@@ -34,10 +35,18 @@ def test_query_kairos(mock_post):
         text = '{"hello": true}'
     mock_post.return_value = Shim()
 
-    assert query_kairos('localhost', 8080, {'goodbye': False})['hello'] is True
+    assert query_kairos('localhost', 8080, {'goodbye': False}) == {'hello': True}
     assert mock_post.call_count == 1
     mock_post.assert_called_once_with('http://localhost:8080/api/v1/datapoints/query',
                                       data='{"goodbye": false}')
+
+
+@patch('tscached.utils.requests.post', autospec=True)
+def test_query_kairos_backend_fails(mock_post):
+    mock_post.side_effect = BackendQueryFailure
+    with pytest.raises(BackendQueryFailure):
+        query_kairos('localhost', 8080, {'goodbye': False})
+    assert mock_post.call_count == 1
 
 
 def test_create_key():

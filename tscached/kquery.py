@@ -29,10 +29,17 @@ class KQuery(DataCache):
         return self.query
 
     def proxy_to_kairos(self, host, port, time_range):
-        """ time_range can be generated via utils.populate_time_range """
+        """ Send this KQuery to Kairos with a custom time range and get the response.
+            host: str, kairosdb host.
+            port: int, kairosdb port.
+            time_range: dict, usually generated via utils.populate_time_range
+            returns: dict, the response from kairos
+            raises: utils.BackendQueryFailure, if the query fails.
+        """
         proxy_query = copy.deepcopy(time_range)
         proxy_query['metrics'] = [self.query]
         proxy_query['cache_time'] = 0
+
         kairos_result = query_kairos(host, port, proxy_query)
 
         if len(kairos_result['queries']) != 1:
