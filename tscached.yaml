@@ -24,6 +24,7 @@ tscached:
         default_expiry: 10800  # 3 hours, in seconds
         expected_resolution: 10000  # in milliseconds
         acceptable_skew: 6  # for merging purposes
+        staleness_threshold: 10  # data up to this far in the past is "new"
 
     shadow:  # in seconds
         http_header_name: 'Tscached-Shadow-Load'
