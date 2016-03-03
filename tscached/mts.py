@@ -181,10 +181,10 @@ class MTS(DataCache):
             start_trim, end_trim = get_needed_absolute_time_range(time_range)
 
             if self.conforms_to_efficient_constraints():
-                logging.debug('Efficient trimming: %s, %s' % (start_trim, end_trim))
+                # logging.debug('Efficient trimming: %s, %s' % (start_trim, end_trim))
                 new_values = self.efficient_trim(start_trim, end_trim)
             else:
-                logging.debug('Robust trimming: %s, %s' % (start_trim, end_trim))
+                # logging.debug('Robust trimming: %s, %s' % (start_trim, end_trim))
                 new_values = list(self.robust_trim(start_trim, end_trim))
 
             # shallow copy just at the first level of the dict
