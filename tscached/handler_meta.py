@@ -3,6 +3,7 @@ import logging
 from flask import request
 import redis
 import requests
+import simplejson as json
 
 from tscached import app
 from tscached.utils import create_key
@@ -37,10 +38,14 @@ def metadata_caching(config, name, endpoint, post_data=None):
     else:
         logging.info('Meta Endpoint MISS: %s' % redis_key)
         url = 'http://%s:%s%s' % (config['kairosdb']['host'], config['kairosdb']['port'], endpoint)
-        if post_data:
-            kairos_result = requests.post(url, data=post_data)
-        else:
-            kairos_result = requests.get(url)
+
+        try:
+            if post_data:
+                kairos_result = requests.post(url, data=post_data)
+            else:
+                kairos_result = requests.get(url)
+        except requests.exceptions.RequestException as e:
+            return json.dumps({'error': 'Could not connect to KairosDB: %s' % e.message}), 500
 
         if kairos_result.status_code != 200:
             # propagate the kairos message to the user along with its error code.
