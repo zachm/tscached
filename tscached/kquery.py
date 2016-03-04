@@ -24,6 +24,20 @@ class KQuery(DataCache):
             new.query = metric
             yield new
 
+    @classmethod
+    def from_cache(cls, redis_keys, redis_client):
+        """ Generator. Given redis keys, yield KQueries. """
+        pipeline = redis_client.pipeline()
+        for key in redis_keys:
+            pipeline.get(key)
+        results = pipeline.execute()
+        for ctr in xrange(len(redis_keys)):
+            new = cls(redis_client)
+            new.redis_key = redis_keys[ctr]
+            new.query = new.process_cached_data(results[ctr])
+            new.cached_data = new.query  # emulating get_cached behavior
+            yield new
+
     def key_basis(self):
         """ We already remove the timestamps and store them separately. """
         return self.query

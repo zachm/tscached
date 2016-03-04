@@ -1,6 +1,10 @@
 import logging
 import socket
 
+from tscached import cache_calls
+from tscached import kquery
+from tscached.utils import BackendQueryFailure
+
 import redis
 import redlock
 
@@ -60,7 +64,7 @@ def become_leader(config, redis_client):
         :return: redlock.RedLock or False
     """
     hostname = socket.gethostname()
-    leader_expiration = config['shadow'].get('leader_expiration', 120) * 1000  # ms expected
+    leader_expiration = config['shadow'].get('leader_expiration', 3600) * 1000  # ms expected
     deets = [redis_client]  # no need to reinitialize a redis connection.
 
     try:
@@ -100,3 +104,35 @@ def release_leader(lock, redis_client):
     except redlock.RedLockError:
         logging.error('RedLockError in release_leader: ' + e.message)
         return False
+
+
+def perform_readahead(config, redis_client):
+    """ The heart of the readahead script.
+        :param config: dict, tscached level of config.
+        :param redis_client: redis.StrictRedis
+        :return: void
+    """
+    lock = become_leader(config, redis_client)
+    if not lock:
+        logging.info('Could not become leader; exiting.')
+        return
+
+    try:
+        redis_keys = list(redis_client.smembers(SHADOW_LIST))
+        logging.info('Found %d KQuery keys in the shadow list' % len(redis_keys))
+
+        for kq in kquery.KQuery.from_cache(redis_keys, redis_client):
+            last_ts = kq.cached_data['last_add_data']  # unix timestamp, seconds
+            mins_in_past = (last_ts / 60) - 5  # add 5m of margin
+
+            # all that really matters is that end_ values are unset.
+            kairos_time_range = {'start_relative': {'unit': 'minutes', 'value': str(mins_in_past)}}
+            kq_resp = cache_calls.process_cache_hit(config, redis_client, kq, kairos_time_range)
+            size = kq_resp.get('sample_size', -1)
+            logging.debug('Processed KQuery %s; sample size now at %d' % (kq.redis_key, size))
+    except BackendQueryFailure as e:
+        logging.error('BackendQueryFailure: %s' % e.message)
+    except redis.exceptions.RedisError as e:
+        logging.error('RedisError: ' + e.message)
+
+    release_leader(lock, redis_client)
