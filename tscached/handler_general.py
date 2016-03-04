@@ -45,19 +45,24 @@ def handle_query():
 
     # HTTP request may contain one or more kqueries
     for kquery in KQuery.from_request(payload, redis_client):
-        kq_result = kquery.get_cached()
-
-        # readahead shadow load support
-        process_for_readahead(config, redis_client, kquery.get_key(), request.referrer, request.headers)
-
         try:
+            # get whatever is in redis for this kquery
+            kq_result = kquery.get_cached()
+
+            # readahead shadow load support
+            process_for_readahead(config, redis_client, kquery.get_key(), request.referrer,
+                                  request.headers)
             if kq_result:
                 kq_resp = cache_calls.process_cache_hit(config, redis_client, kquery, kairos_time_range)
             else:
                 kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
         except BackendQueryFailure as e:
+            # KairosDB is broken so we fail fast.
             logging.error('BackendQueryFailure: %s' % e.message)
             return json.dumps({'error': e.message}), 500
-
+        except redis.exceptions.RedisError as e:
+            # Redis is broken, so we pretend it's a cache miss. This will eat any further exceptions.
+            logging.error('RedisError: ' + e.message)
+            kq_resp = cache_calls.cold(config, redis_client, kquery, kairos_time_range)
         response['queries'].append(kq_resp)
     return json.dumps(response), 200

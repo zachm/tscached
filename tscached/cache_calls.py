@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import redis
 import simplejson as json
 
 from tscached.mts import MTS
@@ -66,11 +67,16 @@ def cold(config, redis_client, kquery, kairos_time_range):
         pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
         response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
 
-    result = pipeline.execute()
-    success_count = len(filter(lambda x: x is True, result))
-    logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
+    try:
+        result = pipeline.execute()
+        success_count = len(filter(lambda x: x is True, result))
+        logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
-    kquery.upsert(start_time, end_time)  # TODO
+        kquery.upsert(start_time, end_time)  # TODO
+    except redis.exceptions.RedisError as e:
+        # We want to eat this redis exception, because in a catastrophe this becones a straight proxy.
+        logging.error('RedisError: ' + e.message)
+
     return response_kquery
 
 
@@ -138,10 +144,13 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
 
             pipeline.set(old_mts.get_key(), json.dumps(old_mts.result), ex=old_mts.expiry)
             response_kquery = old_mts.build_response(kairos_time_range, response_kquery)
+    try:
+        result = pipeline.execute()
+        success_count = len(filter(lambda x: x is True, result))
+        logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
-    result = pipeline.execute()
-    success_count = len(filter(lambda x: x is True, result))
-    logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
-
-    kquery.upsert(new_start_time, new_end_time)
+        kquery.upsert(new_start_time, new_end_time)
+    except redis.exceptions.RedisError as e:
+        # Sneaky edge case where Redis fails after reading but before writing. Still return data!
+        logging.error('RedisError: ' + e.message)
     return response_kquery
