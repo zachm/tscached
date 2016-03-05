@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import logging
 
 import requests
 import simplejson as json
@@ -26,6 +27,15 @@ FETCH_ALL = 'overwrite'
 class BackendQueryFailure(requests.exceptions.RequestException):
     """ Raised if the backing TS database (KairosDB) fails. """
     pass
+
+
+def setup_logging():
+    logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
 
 def get_timedelta(value):

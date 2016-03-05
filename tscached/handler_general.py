@@ -13,15 +13,6 @@ from tscached.utils import BackendQueryFailure
 from tscached.utils import populate_time_range
 
 
-if not app.debug:
-    logger = logging.getLogger()
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-
-
 @app.route('/', methods=['GET'])
 def handle_root():
     if os.path.exists('tscached/kairos-web/index.html'):
