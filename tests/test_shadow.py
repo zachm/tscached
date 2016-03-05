@@ -29,7 +29,7 @@ def test_should_add_to_readahead_sane_url_no_header():
 def test_process_for_readahead_yes():
     redis_cli = MockRedis()
     process_for_readahead(EX_CONFIG, redis_cli, 'tscached:kquery:WAT', 'http://wooo?edit', HEADER_YES)
-    assert redis_cli.sadd_parms == [['tscached:shadow', 'tscached:kquery:WAT']]
+    assert redis_cli.sadd_parms == [['tscached:shadow_list', 'tscached:kquery:WAT']]
 
 
 def test_process_for_readahead_no():
