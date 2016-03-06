@@ -42,6 +42,25 @@ def test_from_request():
     assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
 
 
+def test_from_cache():
+    redis_cli = MockRedis()
+    keys = ['tscached:kquery:deadbeef', 'tscached:kquery:deadcafe']
+    ret = KQuery.from_cache(keys, redis_cli)
+    assert isinstance(ret, GeneratorType)
+    values = list(ret)
+    assert redis_cli.derived_pipeline.pipe_get_call_count == 2
+    assert redis_cli.derived_pipeline.execute_count == 1
+    ctr = 0
+    for kq in values:
+        assert isinstance(kq, KQuery)
+        assert kq.redis_key == keys[ctr]
+        assert kq.query == {'hello': 'goodbye'}  # see testing.MockRedisPipeline
+        assert kq.cached_data == kq.query
+        ctr += 1
+    assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
+    assert redis_cli.derived_pipeline.pipe_set_call_count == 0
+
+
 @patch('tscached.kquery.query_kairos', autospec=True)
 def test_proxy_to_kairos(m_query_kairos):
     m_query_kairos.return_value = {'queries': [{'name': 'first'}, {'name', 'second'}]}
