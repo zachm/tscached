@@ -81,7 +81,7 @@ def become_leader(config, redis_client):
     except redis.exceptions.RedisError as e:
         logging.error('RedisError in acquire_leader: ' + e.message)
         return False
-    except redlock.RedLockError:
+    except redlock.RedLockError as e:
         logging.error('RedLockError in acquire_leader: ' + e.message)
         return False
 
@@ -101,7 +101,7 @@ def release_leader(lock, redis_client):
     except redis.exceptions.RedisError as e:
         logging.error('RedisError in release_leader: ' + e.message)
         return False
-    except redlock.RedLockError:
+    except redlock.RedLockError as e:
         logging.error('RedLockError in release_leader: ' + e.message)
         return False
 
