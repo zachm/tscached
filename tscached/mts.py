@@ -1,4 +1,5 @@
 import copy
+import datetime
 import logging
 
 from datacache import DataCache
@@ -12,6 +13,7 @@ class MTS(DataCache):
         self.result = None
 
         # TODO make these configurable
+        self.gc_expiry = 12600  # three and a half hours
         self.expiry = 10800  # three hours
         self.acceptable_skew = 6
         self.expected_resolution = 10000  # in ms
@@ -49,6 +51,20 @@ class MTS(DataCache):
 
     def upsert(self):
         self.set_cached(self.result)
+
+    def ttl_expire(self):
+        """ Trim off data older than the TTL on the backing KairosDB.
+            The second threshold (gc_expiry) prevents frequent (and expensive!) list slicing.
+            :return: False if no change; datetime.datetime of new beginning otherwise.
+        """
+        first_value_dt = datetime.datetime.fromtimestamp(self.result['values'][0][0] / 1000)
+        gc_expiry_dt = datetime.datetime.now() - datetime.timedelta(seconds=self.gc_expiry)
+        if first_value_dt < gc_expiry_dt:
+            logging.info('Expiring old data for MTS ' + self.get_key())
+            expiry_dt = datetime.datetime.now() - datetime.timedelta(seconds=self.expiry)
+            self.result['values'] = list(self.robust_trim(expiry_dt, end=None))
+            return expiry_dt
+        return False
 
     def merge_at_end(self, new_mts, cutoff=10):
         """ Append one MTS to the end of another. Remove up to cutoff values from end of cached MTS. """
