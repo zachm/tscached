@@ -112,8 +112,9 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
 
     response_kquery = {'results': [], 'sample_size': 0}
 
-    new_start_time = datetime.datetime.fromtimestamp(float(kquery.cached_data.get('earliest_data')))
-    new_end_time = datetime.datetime.fromtimestamp(float(kquery.cached_data.get('last_add_data')))
+    # Initial KQuery, and each MTS, can be slightly different on start/end. We need to get the min/max.
+    start_times = [datetime.datetime.fromtimestamp(float(kquery.cached_data.get('earliest_data')))]
+    end_times = [datetime.datetime.fromtimestamp(float(kquery.cached_data.get('last_add_data')))]
 
     cached_mts = {}  # redis key to MTS
     # pull in cached MTS, put them in a lookup table
@@ -133,10 +134,16 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
             response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
         else:
             if range_needed[2] == FETCH_AFTER:
-                new_end_time = range_needed[1]
+                end_times.append(range_needed[1])
                 old_mts.merge_at_end(mts)
+
+                # This seems the only case where too-old data should be removed.
+                expiry = old_mts.ttl_expire()
+                if expiry:
+                    start_times.append(expiry)
+
             elif range_needed[2] == FETCH_BEFORE:
-                new_start_time = range_needed[0]
+                start_times.append(range_needed[0])
                 old_mts.merge_at_beginning(mts)
             else:
                 logging.error("WARM is not equipped for this range_needed attrib: %s" % range_needed[2])
@@ -149,7 +156,7 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
         success_count = len(filter(lambda x: x is True, result))
         logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
-        kquery.upsert(new_start_time, new_end_time)
+        kquery.upsert(min(start_times), max(end_times))
     except redis.exceptions.RedisError as e:
         # Sneaky edge case where Redis fails after reading but before writing. Still return data!
         logging.error('RedisError: ' + e.message)

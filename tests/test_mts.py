@@ -2,6 +2,7 @@ import copy
 import datetime
 from types import GeneratorType
 
+from freezegun import freeze_time
 import simplejson as json
 
 from testing.mock_redis import MockRedis
@@ -81,6 +82,38 @@ def test_key_basis_no_unset_keys():
     mts.result = mts_cardinality
     assert mts.key_basis() == mts_cardinality
     assert 'group_by' not in mts.key_basis().keys()
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_ttl_expire_no():
+    """ Use default expiries; verify that 120 secs of data doesn't get TTL'd. """
+    data = []
+    for i in xrange(12):
+        then_dt = datetime.datetime.now() - datetime.timedelta(seconds=(10 * i))
+        then_ts = int(then_dt.strftime('%s')) * 1000
+        data.append([then_ts, i])
+    data.reverse()
+
+    mts = MTS(MockRedis())
+    mts.result = {'values': data}
+    assert mts.ttl_expire() is False
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_ttl_expire_yes():
+    """ Use default expiries; verify that 120 secs of data doesn't get TTL'd. """
+    data = []
+    for i in xrange(12):
+        then_dt = datetime.datetime.now() - datetime.timedelta(seconds=(10 * i))
+        then_ts = int(then_dt.strftime('%s')) * 1000
+        data.append([then_ts, i])
+    data.reverse()
+
+    mts = MTS(MockRedis())
+    mts.result = {'values': data, 'tags': {'no': 'yes'}, 'name': 'whatever'}
+    mts.expiry = 60
+    mts.gc_expiry = 90
+    assert mts.ttl_expire() == datetime.datetime.fromtimestamp(data[5][0] / 1000)
 
 
 def test_upsert():
