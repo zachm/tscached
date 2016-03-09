@@ -26,6 +26,10 @@ tscached:
         acceptable_skew: 6  # for merging purposes
         staleness_threshold: 10  # data up to this far in the past is "new"
 
+    chunking:
+        chunk_length: 1800  # chunk on 30 minute intervals
+        max_chunks: 6  # increase chunk size if more than this needed
+
     shadow:  # in seconds
         http_header_name: 'Tscached-Shadow-Load'
         update_interval: 300  # how often to run the update script (secs)
