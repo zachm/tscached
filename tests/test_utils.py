@@ -158,6 +158,21 @@ def test_get_chunked_time_ranges_last_12h():
 
 
 @freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_get_chunked_time_ranges_last_5h15m():
+    kairos_timing = {'start_relative': {'unit': 'minutes', 'value': '135'}}
+    now = datetime.datetime.now()
+    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    assert len(results) == 5
+    for i in xrange(len(results) - 1):
+        offset = datetime.timedelta(minutes=(i * 30))
+        assert results[i][1] == now - offset
+        assert results[i][0] == now - offset - datetime.timedelta(minutes=30)
+    assert results[4][0] == now - datetime.timedelta(minutes=135)
+    assert results[4][1] == now - datetime.timedelta(minutes=120)
+
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
 def test_get_range_needed():
 
     now = datetime.datetime.now()
