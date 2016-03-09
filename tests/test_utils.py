@@ -11,6 +11,7 @@ from tscached.utils import FETCH_ALL
 from tscached.utils import FETCH_BEFORE
 from tscached.utils import create_key
 from tscached.utils import get_timedelta
+from tscached.utils import get_chunked_time_ranges
 from tscached.utils import get_needed_absolute_time_range
 from tscached.utils import get_range_needed
 from tscached.utils import populate_time_range
@@ -122,6 +123,38 @@ def test_get_needed_absolute_time_range(m_dt):
     s, e = get_needed_absolute_time_range(example)
     assert s == datetime.datetime.now() - datetime.timedelta(hours=1)
     assert e == datetime.datetime.now() - datetime.timedelta(minutes=1)
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_get_chunked_time_ranges_last_15m():
+    kairos_timing = {'start_relative': {'unit': 'minutes', 'value': '15'}}
+    now = datetime.datetime.now()
+    then = now - datetime.timedelta(minutes=15)
+    assert get_chunked_time_ranges({'chunking': {}}, kairos_timing) == [(then, now)]
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_get_chunked_time_ranges_last_2h():
+    kairos_timing = {'start_relative': {'unit': 'hours', 'value': '2'}}
+    now = datetime.datetime.now()
+    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    assert len(results) == 4
+    for i in xrange(len(results)):
+        offset = datetime.timedelta(minutes=(i * 30))
+        assert results[i][1] == now - offset
+        assert results[i][0] == now - offset - datetime.timedelta(minutes=30)
+
+
+@freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+def test_get_chunked_time_ranges_last_12h():
+    kairos_timing = {'start_relative': {'unit': 'hours', 'value': '12'}}
+    now = datetime.datetime.now()
+    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    assert len(results) == 6
+    for i in xrange(len(results)):
+        offset = datetime.timedelta(minutes=(i * 120))
+        assert results[i][1] == now - offset
+        assert results[i][0] == now - offset - datetime.timedelta(minutes=120)
 
 
 @freeze_time("2016-01-01 20:00:00", tz_offset=-8)
