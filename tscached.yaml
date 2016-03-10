@@ -27,8 +27,9 @@ tscached:
         staleness_threshold: 10  # data up to this far in the past is "new"
 
     chunking:
-        chunk_length: 1800  # chunk on 30 minute intervals
+        chunk_length: 3600  # chunk on 1 hour intervals
         max_chunks: 6  # increase chunk size if more than this needed
+        thread_timeout: 30  # timeout on waiting for chunk threads to join
 
     shadow:  # in seconds
         http_header_name: 'Tscached-Shadow-Load'
