@@ -137,7 +137,7 @@ def test_get_chunked_time_ranges_last_15m():
 def test_get_chunked_time_ranges_last_2h():
     kairos_timing = {'start_relative': {'unit': 'hours', 'value': '2'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 4
     for i in xrange(len(results)):
         offset = datetime.timedelta(minutes=(i * 30))
@@ -149,7 +149,7 @@ def test_get_chunked_time_ranges_last_2h():
 def test_get_chunked_time_ranges_last_12h():
     kairos_timing = {'start_relative': {'unit': 'hours', 'value': '12'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 6
     for i in xrange(len(results)):
         offset = datetime.timedelta(minutes=(i * 120))
@@ -161,7 +161,7 @@ def test_get_chunked_time_ranges_last_12h():
 def test_get_chunked_time_ranges_last_2h15m():
     kairos_timing = {'start_relative': {'unit': 'minutes', 'value': '135'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 5
     for i in xrange(len(results) - 1):
         offset = datetime.timedelta(minutes=(i * 30))
@@ -177,7 +177,7 @@ def test_get_chunked_time_ranges_last_1h_clock_drift():
     """
     kairos_timing = {'start_relative': {'unit': 'hours', 'value': '1'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 2
     for i in xrange(len(results) - 1):
         offset = datetime.timedelta(minutes=(i * 30))
