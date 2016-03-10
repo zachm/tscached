@@ -96,7 +96,6 @@ class KQuery(DataCache):
 
             # Create the thread, keep a reference to it, and start it off.
             thr = threading.Thread(target=_thread_wrap, args=(ndx, query))
-            thr.daemon = True
             threads.append(thr)
             thr.start()
             ndx += 1
