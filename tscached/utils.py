@@ -45,11 +45,12 @@ def get_timedelta(value):
     return datetime.timedelta(seconds=seconds)
 
 
-def query_kairos(kairos_host, kairos_port, query):
+def query_kairos(kairos_host, kairos_port, query, propagate=True):
     """ As the name states.
         :param kairos_host: str, host/fqdn of kairos server. commonly a load balancer.
         :param kairos_port: int, port that kairos (or a proxy) listens on.
         :param query: dict to send to kairos.
+        :param propagate: bool, should we raise (or swallow) exceptions.
         :return: dict containing kairos' response.
         :raise: BackendQueryFailure if the operation doesn't succeed.
     """
@@ -59,10 +60,14 @@ def query_kairos(kairos_host, kairos_port, query):
         value = json.loads(r.text)
         if r.status_code / 100 != 2:
             message = ', '.join(value.get('errors', ['No message given']))
-            raise BackendQueryFailure('KairosDB responded %d: %s' % (r.status_code, message))
+            if propagate:
+                raise BackendQueryFailure('KairosDB responded %d: %s' % (r.status_code, message))
+            return {'status_code': r.status_code, 'error': message}
         return value
     except requests.exceptions.RequestException as e:
-        raise BackendQueryFailure('Could not connect to KairosDB: %s' % e.message)
+        if propagate:
+            raise BackendQueryFailure('Could not connect to KairosDB: %s' % e.message)
+        return {'status_code': 500, 'error': e.message}
 
 
 def create_key(data, tipo):
