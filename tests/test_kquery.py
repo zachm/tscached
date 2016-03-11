@@ -44,6 +44,28 @@ def test_from_request():
     assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
 
 
+def test_from_request_replace_align_sampling():
+    redis_cli = MockRedis()
+    aggregator = {'name': 'sum', 'align_sampling': True, 'sampling': {'value': '1', 'unit': 'minutes'}}
+    example_request = {
+                       'metrics': [{'hello': 'some query', 'aggregators': [aggregator]}],
+                       'start_relative': {'value': '1', 'unit': 'hours'}
+                      }
+    agg_out = {'name': 'sum', 'align_start_time': True, 'sampling': {'value': '1', 'unit': 'minutes'}}
+    request_out = {
+                   'metrics': [{'hello': 'some query', 'aggregators': [agg_out]}],
+                   'start_relative': {'value': '1', 'unit': 'hours'}
+                  }
+
+    ret_vals = KQuery.from_request(example_request, redis_cli)
+    assert isinstance(ret_vals, GeneratorType)
+    ret_vals = list(ret_vals)
+    assert len(ret_vals) == 1
+    assert isinstance(ret_vals[0], KQuery)
+    assert ret_vals[0].query == request_out['metrics'][0]
+    assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
+
+
 def test_from_cache():
     redis_cli = MockRedis()
     keys = ['tscached:kquery:deadbeef', 'tscached:kquery:deadcafe']
@@ -111,7 +133,7 @@ def test_proxy_to_kairos_chunked_raises_except(m_query_kairos):
     then = datetime.datetime.fromtimestamp(1234567890)
     diff = datetime.timedelta(minutes=30)
     time_ranges = [(then - diff, then), (then - diff - diff, then - diff)]
-    with pytest.raises(BackendQueryFailure) as e:
+    with pytest.raises(BackendQueryFailure):
         kq.proxy_to_kairos_chunked('localhost', 8080, time_ranges)
 
 
