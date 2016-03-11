@@ -4,6 +4,7 @@ import pytest
 import simplejson as json
 
 from freezegun import freeze_time
+import requests
 
 from tscached.utils import BackendQueryFailure
 from tscached.utils import FETCH_AFTER
@@ -55,11 +56,32 @@ def test_query_kairos_backend_gives_non_200(mock_post):
 
 
 @patch('tscached.utils.requests.post', autospec=True)
+def test_query_kairos_backend_gives_non_200_no_propagate(mock_post):
+    class Shim(object):
+        text = '{"errors": ["whatever", "lol"]}'
+        status_code = 500
+    mock_post.return_value = Shim()
+    result = query_kairos('localhost', 8080, {'goodbye': False}, propagate=False)
+    assert result['status_code'] == 500
+    assert result['error'] == 'whatever, lol'
+    assert mock_post.call_count == 1
+
+
+@patch('tscached.utils.requests.post', autospec=True)
 def test_query_kairos_backend_fails(mock_post):
-    mock_post.side_effect = BackendQueryFailure
+    mock_post.side_effect = requests.exceptions.RequestException
     with pytest.raises(BackendQueryFailure):
         query_kairos('localhost', 8080, {'goodbye': False})
     assert mock_post.call_count == 1
+
+
+@patch('tscached.utils.requests.post', autospec=True)
+def test_query_kairos_backend_fails_no_propagate(mock_post):
+    mock_post.side_effect = requests.exceptions.RequestException
+    result = query_kairos('localhost', 8080, {'goodbye': False}, propagate=False)
+    assert mock_post.call_count == 1
+    assert result['status_code'] == 500
+    assert result['error'] == ''
 
 
 def test_create_key():
