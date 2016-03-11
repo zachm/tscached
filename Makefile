@@ -35,7 +35,7 @@ clean:
 
 # Run with uWSGI server, multiple workers, etc.
 run: venv frontend
-	source venv/bin/activate ; uwsgi --ini uwsgi.ini -H venv
+	source venv/bin/activate ; uwsgi --ini tscached.uwsgi.ini --wsgi-file tscached/uwsgi.py -H venv
 
 # Run with single-threaded debug server. Flask gives you auto-reloading on code changes for free.
 debug: venv frontend
