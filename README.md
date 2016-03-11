@@ -1,5 +1,8 @@
 # tscached
 
+![tscached logo]
+(https://github.com/zachm/tscached/raw/master/logo/logo.png)
+
 tscached is a smart caching proxy, built with Redis, for time series data in the [KairosDB](https://kairosdb.github.io/) format.
 
 Inspired by [arussellsaw/postcache](https://github.com/arussellsaw/postcache) - tscached goes one
