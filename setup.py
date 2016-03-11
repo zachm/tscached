@@ -36,4 +36,10 @@ setup(
     extras_requires={
         'testing': ['mock', 'freezegun'],
     },
+    entry_points={
+        'console_scripts': [
+            'readahead=tscached.readahead:start'
+        ],
+    },
+
 )
