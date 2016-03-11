@@ -105,8 +105,8 @@ class KQuery(DataCache):
 
         for val in results.values():  # Quick and dirty exception propagation.
             if 'error' in val:
-                raise BackendQueryFailure('KairosDB responded %d: %s' % (val['status_code'],
-                                          val['message']))
+                raise BackendQueryFailure('KairosDB responded %d: %s' % (val.get('status_code', 0),
+                                          val.get('message', 'no error given')))
 
         return results
 

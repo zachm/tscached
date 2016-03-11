@@ -4,9 +4,11 @@ from types import GeneratorType
 
 from freezegun import freeze_time
 from mock import patch
+import pytest
 
 from testing.mock_redis import MockRedis
 from tscached.kquery import KQuery
+from tscached.utils import BackendQueryFailure
 
 
 def test__init__etc():
@@ -72,6 +74,45 @@ def test_proxy_to_kairos(m_query_kairos):
 
     called_query = {'metrics': [{'hello': 'goodbye'}], 'cache_time': 0, 'start_absolute': 1234567890000}
     m_query_kairos.assert_called_once_with('localhost', 8080, called_query)
+
+
+@freeze_time("2016-01-01 00:00:00", tz_offset=-8)
+@patch('tscached.kquery.query_kairos', autospec=True)
+def test_proxy_to_kairos_chunked_happy(m_query_kairos):
+    m_query_kairos.return_value = {'queries': [{'name': 'first'}, {'name', 'second'}]}
+
+    kq = KQuery(MockRedis())
+    kq.query = {'hello': 'goodbye'}
+    then = datetime.datetime.fromtimestamp(1234567890)
+    diff = datetime.timedelta(minutes=30)
+    time_ranges = [(then - diff, then), (then - diff - diff, then - diff)]
+    results = kq.proxy_to_kairos_chunked('localhost', 8080, time_ranges)
+
+    assert len(results) == 2
+    assert m_query_kairos.call_count == 2
+    expected_query = {'cache_time': 0, 'metrics': [{'hello': 'goodbye'}]}
+
+    expected_query['start_absolute'] = int((then - diff).strftime('%s')) * 1000
+    expected_query['end_absolute'] = int((then).strftime('%s')) * 1000
+    assert m_query_kairos.call_args_list[0] == (('localhost', 8080, expected_query), {'propagate': False})
+
+    expected_query['start_absolute'] = int((then - diff - diff).strftime('%s')) * 1000
+    expected_query['end_absolute'] = int((then - diff).strftime('%s')) * 1000
+    assert m_query_kairos.call_args_list[1] == (('localhost', 8080, expected_query), {'propagate': False})
+
+
+@freeze_time("2016-01-01 00:00:00", tz_offset=-8)
+@patch('tscached.kquery.query_kairos', autospec=True)
+def test_proxy_to_kairos_chunked_raises_except(m_query_kairos):
+    m_query_kairos.return_value = {'error': 'some error message', 'status_code': 500}
+
+    kq = KQuery(MockRedis())
+    kq.query = {'hello': 'goodbye'}
+    then = datetime.datetime.fromtimestamp(1234567890)
+    diff = datetime.timedelta(minutes=30)
+    time_ranges = [(then - diff, then), (then - diff - diff, then - diff)]
+    with pytest.raises(BackendQueryFailure) as e:
+        kq.proxy_to_kairos_chunked('localhost', 8080, time_ranges)
 
 
 @freeze_time("2016-01-01 00:00:00", tz_offset=-8)
