@@ -4,6 +4,7 @@ import pytest
 import simplejson as json
 
 from freezegun import freeze_time
+import requests
 
 from tscached.utils import BackendQueryFailure
 from tscached.utils import FETCH_AFTER
@@ -55,11 +56,32 @@ def test_query_kairos_backend_gives_non_200(mock_post):
 
 
 @patch('tscached.utils.requests.post', autospec=True)
+def test_query_kairos_backend_gives_non_200_no_propagate(mock_post):
+    class Shim(object):
+        text = '{"errors": ["whatever", "lol"]}'
+        status_code = 500
+    mock_post.return_value = Shim()
+    result = query_kairos('localhost', 8080, {'goodbye': False}, propagate=False)
+    assert result['status_code'] == 500
+    assert result['error'] == 'whatever, lol'
+    assert mock_post.call_count == 1
+
+
+@patch('tscached.utils.requests.post', autospec=True)
 def test_query_kairos_backend_fails(mock_post):
-    mock_post.side_effect = BackendQueryFailure
+    mock_post.side_effect = requests.exceptions.RequestException
     with pytest.raises(BackendQueryFailure):
         query_kairos('localhost', 8080, {'goodbye': False})
     assert mock_post.call_count == 1
+
+
+@patch('tscached.utils.requests.post', autospec=True)
+def test_query_kairos_backend_fails_no_propagate(mock_post):
+    mock_post.side_effect = requests.exceptions.RequestException
+    result = query_kairos('localhost', 8080, {'goodbye': False}, propagate=False)
+    assert mock_post.call_count == 1
+    assert result['status_code'] == 500
+    assert result['error'] == ''
 
 
 def test_create_key():
@@ -137,7 +159,7 @@ def test_get_chunked_time_ranges_last_15m():
 def test_get_chunked_time_ranges_last_2h():
     kairos_timing = {'start_relative': {'unit': 'hours', 'value': '2'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 4
     for i in xrange(len(results)):
         offset = datetime.timedelta(minutes=(i * 30))
@@ -149,7 +171,7 @@ def test_get_chunked_time_ranges_last_2h():
 def test_get_chunked_time_ranges_last_12h():
     kairos_timing = {'start_relative': {'unit': 'hours', 'value': '12'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 6
     for i in xrange(len(results)):
         offset = datetime.timedelta(minutes=(i * 120))
@@ -161,7 +183,7 @@ def test_get_chunked_time_ranges_last_12h():
 def test_get_chunked_time_ranges_last_2h15m():
     kairos_timing = {'start_relative': {'unit': 'minutes', 'value': '135'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 5
     for i in xrange(len(results) - 1):
         offset = datetime.timedelta(minutes=(i * 30))
@@ -177,7 +199,7 @@ def test_get_chunked_time_ranges_last_1h_clock_drift():
     """
     kairos_timing = {'start_relative': {'unit': 'hours', 'value': '1'}}
     now = datetime.datetime.now()
-    results = get_chunked_time_ranges({'chunking': {}}, kairos_timing)
+    results = get_chunked_time_ranges({'chunking': {'chunk_length': 1800}}, kairos_timing)
     assert len(results) == 2
     for i in xrange(len(results) - 1):
         offset = datetime.timedelta(minutes=(i * 30))

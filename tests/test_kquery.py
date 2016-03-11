@@ -4,9 +4,11 @@ from types import GeneratorType
 
 from freezegun import freeze_time
 from mock import patch
+import pytest
 
 from testing.mock_redis import MockRedis
 from tscached.kquery import KQuery
+from tscached.utils import BackendQueryFailure
 
 
 def test__init__etc():
@@ -42,6 +44,28 @@ def test_from_request():
     assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
 
 
+def test_from_request_replace_align_sampling():
+    redis_cli = MockRedis()
+    aggregator = {'name': 'sum', 'align_sampling': True, 'sampling': {'value': '1', 'unit': 'minutes'}}
+    example_request = {
+                       'metrics': [{'hello': 'some query', 'aggregators': [aggregator]}],
+                       'start_relative': {'value': '1', 'unit': 'hours'}
+                      }
+    agg_out = {'name': 'sum', 'align_start_time': True, 'sampling': {'value': '1', 'unit': 'minutes'}}
+    request_out = {
+                   'metrics': [{'hello': 'some query', 'aggregators': [agg_out]}],
+                   'start_relative': {'value': '1', 'unit': 'hours'}
+                  }
+
+    ret_vals = KQuery.from_request(example_request, redis_cli)
+    assert isinstance(ret_vals, GeneratorType)
+    ret_vals = list(ret_vals)
+    assert len(ret_vals) == 1
+    assert isinstance(ret_vals[0], KQuery)
+    assert ret_vals[0].query == request_out['metrics'][0]
+    assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
+
+
 def test_from_cache():
     redis_cli = MockRedis()
     keys = ['tscached:kquery:deadbeef', 'tscached:kquery:deadcafe']
@@ -72,6 +96,45 @@ def test_proxy_to_kairos(m_query_kairos):
 
     called_query = {'metrics': [{'hello': 'goodbye'}], 'cache_time': 0, 'start_absolute': 1234567890000}
     m_query_kairos.assert_called_once_with('localhost', 8080, called_query)
+
+
+@freeze_time("2016-01-01 00:00:00", tz_offset=-8)
+@patch('tscached.kquery.query_kairos', autospec=True)
+def test_proxy_to_kairos_chunked_happy(m_query_kairos):
+    m_query_kairos.return_value = {'queries': [{'name': 'first'}, {'name', 'second'}]}
+
+    kq = KQuery(MockRedis())
+    kq.query = {'hello': 'goodbye'}
+    then = datetime.datetime.fromtimestamp(1234567890)
+    diff = datetime.timedelta(minutes=30)
+    time_ranges = [(then - diff, then), (then - diff - diff, then - diff)]
+    results = kq.proxy_to_kairos_chunked('localhost', 8080, time_ranges)
+
+    assert len(results) == 2
+    assert m_query_kairos.call_count == 2
+    expected_query = {'cache_time': 0, 'metrics': [{'hello': 'goodbye'}]}
+
+    expected_query['start_absolute'] = int((then - diff).strftime('%s')) * 1000
+    expected_query['end_absolute'] = int((then).strftime('%s')) * 1000
+    assert m_query_kairos.call_args_list[0] == (('localhost', 8080, expected_query), {'propagate': False})
+
+    expected_query['start_absolute'] = int((then - diff - diff).strftime('%s')) * 1000
+    expected_query['end_absolute'] = int((then - diff).strftime('%s')) * 1000
+    assert m_query_kairos.call_args_list[1] == (('localhost', 8080, expected_query), {'propagate': False})
+
+
+@freeze_time("2016-01-01 00:00:00", tz_offset=-8)
+@patch('tscached.kquery.query_kairos', autospec=True)
+def test_proxy_to_kairos_chunked_raises_except(m_query_kairos):
+    m_query_kairos.return_value = {'error': 'some error message', 'status_code': 500}
+
+    kq = KQuery(MockRedis())
+    kq.query = {'hello': 'goodbye'}
+    then = datetime.datetime.fromtimestamp(1234567890)
+    diff = datetime.timedelta(minutes=30)
+    time_ranges = [(then - diff, then), (then - diff - diff, then - diff)]
+    with pytest.raises(BackendQueryFailure):
+        kq.proxy_to_kairos_chunked('localhost', 8080, time_ranges)
 
 
 @freeze_time("2016-01-01 00:00:00", tz_offset=-8)

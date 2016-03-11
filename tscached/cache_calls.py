@@ -9,6 +9,7 @@ from tscached.utils import BackendQueryFailure
 from tscached.utils import FETCH_AFTER
 from tscached.utils import FETCH_ALL
 from tscached.utils import FETCH_BEFORE
+from tscached.utils import get_chunked_time_ranges
 from tscached.utils import get_range_needed
 from tscached.utils import get_needed_absolute_time_range
 
@@ -51,30 +52,50 @@ def process_cache_hit(config, redis_client, kquery, kairos_time_range):
 
 
 def cold(config, redis_client, kquery, kairos_time_range):
-    """ Cold / Miss """
-    logging.info('KQuery is COLD')
+    """ Cold / Miss, with chunking.
+        :param config: dict, 'tscached' level from config file.
+        :param redis_client: redis.StrictRedis
+        :param kquery: kquery.KQuery object
+        :param kairos_time_range: dict, time range from HTTP request payload
+        :return: dict, with keys sample_size (int) and results (list of dicts).
+    """
+    chunked_ranges = get_chunked_time_ranges(config, kairos_time_range)
+    results = kquery.proxy_to_kairos_chunked(config['kairosdb']['host'], config['kairosdb']['port'],
+                                             chunked_ranges)
+    logging.info('KQuery is COLD - using %d chunks' % len(results))
 
-    start_time, end_time = get_needed_absolute_time_range(kairos_time_range)
+    # Merge everything together as they come out - in chunked order - from the result.
+    mts_lookup = {}
+    ndx = len(results) - 1  # Results come out newest to eldest, so count backwards.
+    while ndx >= 0:
+        for mts in MTS.from_result(results[ndx]['queries'][0], redis_client):
+            if not mts_lookup.get(mts.get_key()):
+                mts_lookup[mts.get_key()] = mts
+            else:
+                # So, we could use merge_at_end, but it throws away beginning/ending values because of
+                # partial windowing. But since we force align_start_time, we don't have that worry here.
+                mts_lookup[mts.get_key()].result['values'] += mts.result['values']
+        ndx -= 1
 
+    # Accumulate the full KQuery response as the Redis operations are being queued up.
     response_kquery = {'results': [], 'sample_size': 0}
-    kairos_result = kquery.proxy_to_kairos(config['kairosdb']['host'], config['kairosdb']['port'],
-                                           kairos_time_range)
-
     pipeline = redis_client.pipeline()
-    # Loop over every MTS
-    for mts in MTS.from_result(kairos_result['queries'][0], redis_client):
+    for mts in mts_lookup.values():
         kquery.add_mts(mts)
         pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
         response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
 
+    # Execute the MTS Redis pipeline, then set the KQuery to its full new value.
     try:
         result = pipeline.execute()
         success_count = len(filter(lambda x: x is True, result))
         logging.info("MTS write pipeline: %d of %d successful" % (success_count, len(result)))
 
-        kquery.upsert(start_time, end_time)  # TODO
+        start_time = chunked_ranges[-1][0]
+        end_time = chunked_ranges[0][1]
+        kquery.upsert(start_time, end_time)
     except redis.exceptions.RedisError as e:
-        # We want to eat this redis exception, because in a catastrophe this becones a straight proxy.
+        # We want to eat this Redis exception, because in a catastrophe this becones a straight proxy.
         logging.error('RedisError: ' + e.message)
 
     return response_kquery
