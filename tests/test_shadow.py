@@ -1,14 +1,19 @@
+import datetime
+
+import freezegun
 import mock
 import pytest
 import redis
 import redlock
 
 from testing.mock_redis import MockRedis
-
+from tscached.kquery import KQuery
 from tscached.shadow import become_leader
 from tscached.shadow import release_leader
+from tscached.shadow import perform_readahead
 from tscached.shadow import process_for_readahead
 from tscached.shadow import should_add_to_readahead
+from tscached.utils import BackendQueryFailure
 
 
 EX_CONFIG = {'shadow': {'http_header_name': 'Tscached-Shadow-Load', 'referrer_blacklist': ['edit']}}
@@ -116,3 +121,88 @@ def test_release_leader_catch_redlockerror():
     assert release_leader(lock, redcli) is False
     assert lock.release.call_count == 1
     assert redcli.delete.call_count == 0
+
+
+@mock.patch('tscached.shadow.become_leader')
+def test_perform_readahead_no_leader(m_become_leader):
+    m_become_leader.return_value = False
+    assert perform_readahead({}, MockRedis()) is None
+    assert m_become_leader.call_count == 1
+
+
+@freezegun.freeze_time("2016-01-01 20:00:00", tz_offset=-8)
+@mock.patch('tscached.shadow.become_leader')
+@mock.patch('tscached.shadow.release_leader')
+@mock.patch('tscached.shadow.kquery.KQuery.from_cache')
+@mock.patch('tscached.shadow.cache_calls.process_cache_hit')
+def test_perform_readahead_happy_path(m_process, m_from_cache, m_release_leader, m_become_leader):
+    redis_cli = MockRedis()
+
+    def _smem(_):
+        return set(['tscached:kquery:superspecial'])
+    redis_cli.smembers = _smem
+    m_become_leader.return_value = True
+    kqueries = []
+    for ndx in xrange(10):
+        kq = KQuery(redis_cli)
+        kq.cached_data = {'last_add_data': int(datetime.datetime.now().strftime('%s')) - 1800,
+                          'redis_key': 'tscached:kquery:' + str(ndx)}
+        kqueries.append(kq)
+    m_from_cache.return_value = kqueries
+    m_process.return_value = {'sample_size': 666}
+
+    assert perform_readahead({}, redis_cli) is None
+    assert m_become_leader.call_count == 1
+    assert m_release_leader.call_count == 1
+    assert m_from_cache.call_count == 1
+    assert m_from_cache.call_args_list[0][0] == (['tscached:kquery:superspecial'], redis_cli)
+    assert m_process.call_count == 10
+    k_t_r = {'start_relative': {'unit': 'minutes', 'value': '24194605'}}
+    for ndx in xrange(10):
+        assert m_process.call_args_list[ndx][0] == ({}, redis_cli, kqueries[ndx], k_t_r)
+
+
+@mock.patch('tscached.shadow.become_leader')
+@mock.patch('tscached.shadow.release_leader')
+@mock.patch('tscached.shadow.kquery.KQuery.from_cache')
+@mock.patch('tscached.shadow.cache_calls.process_cache_hit')
+def test_perform_readahead_redis_error(m_process, m_from_cache, m_release_leader, m_become_leader):
+    redis_cli = MockRedis()
+
+    def _smem(_):
+        raise redis.exceptions.RedisError("OOPS!")
+    redis_cli.smembers = _smem
+    m_become_leader.return_value = True
+
+    assert perform_readahead({}, redis_cli) is None
+    assert m_become_leader.call_count == 1
+    assert m_release_leader.call_count == 1
+    assert m_from_cache.call_count == 0
+    assert m_process.call_count == 0
+
+
+@mock.patch('tscached.shadow.become_leader')
+@mock.patch('tscached.shadow.release_leader')
+@mock.patch('tscached.shadow.kquery.KQuery.from_cache')
+@mock.patch('tscached.shadow.cache_calls.process_cache_hit')
+def test_perform_readahead_backend_error(m_process, m_from_cache, m_release_leader, m_become_leader):
+    redis_cli = MockRedis()
+
+    def _smem(_):
+        return set(['tscached:kquery:superspecial'])
+    redis_cli.smembers = _smem
+    m_become_leader.return_value = True
+    kqueries = []
+    for ndx in xrange(10):
+        kq = KQuery(redis_cli)
+        kq.cached_data = {'last_add_data': int(datetime.datetime.now().strftime('%s')) - 1800,
+                          'redis_key': 'tscached:kquery:' + str(ndx)}
+        kqueries.append(kq)
+    m_from_cache.return_value = kqueries
+    m_process.side_effect = BackendQueryFailure('OOPS!')
+
+    assert perform_readahead({}, redis_cli) is None
+    assert m_become_leader.call_count == 1
+    assert m_release_leader.call_count == 1
+    assert m_from_cache.call_count == 1
+    assert m_process.call_count == 1
