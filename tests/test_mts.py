@@ -3,6 +3,7 @@ import datetime
 from types import GeneratorType
 
 from freezegun import freeze_time
+import mock
 import simplejson as json
 
 from testing.mock_redis import MockRedis
@@ -247,3 +248,70 @@ def test_robust_trim_with_end():
     gen = mts.robust_trim(datetime.datetime.fromtimestamp(1234567990),
                           datetime.datetime.fromtimestamp(1234568290))
     assert len(list(gen)) == 301
+
+
+def test_build_response_no_trim():
+    response_kquery = {'results': [], 'sample_size': 0}
+    mts = MTS(MockRedis())
+    mts.result = {'name': 'myMetric'}
+    mts.result['values'] = [[1234567890000, 12], [1234567900000, 13]]
+
+    result = mts.build_response({}, response_kquery, trim=False)
+    result = mts.build_response({}, response_kquery, trim=False)
+    assert len(result) == 2
+    assert result['sample_size'] == 4
+    assert result['results'] == [mts.result, mts.result]
+
+
+@mock.patch('tscached.mts.MTS.robust_trim')
+@mock.patch('tscached.mts.MTS.efficient_trim')
+@mock.patch('tscached.mts.MTS.conforms_to_efficient_constraints')
+def test_build_response_yes_trim_efficient_ok(m_conforms, m_efficient, m_robust):
+    m_conforms.return_value = True
+    m_efficient.return_value = [[1234567890000, 22], [1234567900000, 23]]
+
+    response_kquery = {'results': [], 'sample_size': 0}
+    mts = MTS(MockRedis())
+    mts.result = {'name': 'myMetric'}
+    mts.result['values'] = [[1234567890000, 12], [1234567900000, 13]]
+
+    ktr = {'start_absolute': '1234567880000'}
+    result = mts.build_response(ktr, response_kquery, trim=True)
+    result = mts.build_response(ktr, response_kquery, trim=True)
+    assert len(result) == 2
+    assert result['sample_size'] == 4
+    assert result['results'][0] == {'name': 'myMetric', 'values':
+                                    [[1234567890000, 22], [1234567900000, 23]]}
+    assert result['results'][1] == result['results'][0]
+    assert m_conforms.call_count == 2
+    assert m_robust.call_count == 0
+    assert m_efficient.call_count == 2
+    assert m_efficient.call_args_list[0][0] == (datetime.datetime.fromtimestamp(1234567880), None)
+    assert m_efficient.call_args_list[1][0] == (datetime.datetime.fromtimestamp(1234567880), None)
+
+
+@mock.patch('tscached.mts.MTS.robust_trim')
+@mock.patch('tscached.mts.MTS.efficient_trim')
+@mock.patch('tscached.mts.MTS.conforms_to_efficient_constraints')
+def test_build_response_yes_trim_efficient_not_ok(m_conforms, m_efficient, m_robust):
+    m_conforms.return_value = False
+    m_robust.return_value = [[1234567890000, 22], [1234567900000, 23]]
+
+    response_kquery = {'results': [], 'sample_size': 0}
+    mts = MTS(MockRedis())
+    mts.result = {'name': 'myMetric'}
+    mts.result['values'] = [[1234567890000, 12], [1234567900000, 13]]
+
+    ktr = {'start_absolute': '1234567880000'}
+    result = mts.build_response(ktr, response_kquery, trim=True)
+    result = mts.build_response(ktr, response_kquery, trim=True)
+    assert len(result) == 2
+    assert result['sample_size'] == 4
+    assert result['results'][0] == {'name': 'myMetric', 'values':
+                                    [[1234567890000, 22], [1234567900000, 23]]}
+    assert result['results'][1] == result['results'][0]
+    assert m_conforms.call_count == 2
+    assert m_robust.call_count == 2
+    assert m_efficient.call_count == 0
+    assert m_robust.call_args_list[0][0] == (datetime.datetime.fromtimestamp(1234567880), None)
+    assert m_robust.call_args_list[1][0] == (datetime.datetime.fromtimestamp(1234567880), None)

@@ -185,16 +185,17 @@ class MTS(DataCache):
             return True
         return False
 
-    def build_response(self, time_range, response_dict, trim=True):
-        """ TODO should refactor this to a better pattern.
-            Mutates internal state and returns it as a dict.
+    def build_response(self, kairos_time_range, response_dict, trim=True):
+        """ Update a KQuery response dict with this MTS' information, then return it.
             This should be the last method called in the lifecycle of MTS objects.
-            response_dict - the accumulator.
-            trim - to trim or not to trim.
+            :param kairos_time_range: dict, time range from HTTP request payload
+            :param response_dict: dict, the accumulator. keys 'results', 'sample_size' required.
+            :param trim: bool, to trim or not to trim.
+            :return: an updated response_dict.
         """
         new_values = None
         if trim:
-            start_trim, end_trim = get_needed_absolute_time_range(time_range)
+            start_trim, end_trim = get_needed_absolute_time_range(kairos_time_range)
 
             if self.conforms_to_efficient_constraints():
                 # logging.debug('Efficient trimming: %s, %s' % (start_trim, end_trim))
