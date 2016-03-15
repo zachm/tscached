@@ -1,6 +1,11 @@
 #!/bin/sh
 
 addgroup tscached || /bin/true
-adduser --system tscached || /bin/true
+adduser --system tscached --ingroup tscached || /bin/true
+
 mkdir -p /var/log/tscached
 chown tscached:tscached /var/log/tscached
+
+touch /var/log/tscached/tscached.log
+chown tscached:tscached /var/log/tscached/tscached.log
+chmod 644 /var/log/tscached/tscached.log

@@ -2,6 +2,10 @@ description "tscached"
 author "ztm@zachm.us"
 start on runlevel [2345] and net-device-up IFACE!=lo
 stop on runlevel [!2345]
+respawn
+
+post-stop exec /bin/sleep 5
+
 
 script
 
@@ -9,7 +13,6 @@ USER="tscached"
 CONFIG_FILE="/etc/tscached.yaml"
 WSGI_CONFIG_FILE="/etc/tscached.uwsgi.ini"
 LOG_FILE="/var/log/tscached/tscached.log"
-
 
 if [ -e "/etc/default/tscached" ]; then
   . /etc/default/tscached
