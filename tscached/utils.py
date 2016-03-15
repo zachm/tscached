@@ -162,7 +162,12 @@ def get_chunked_time_ranges(config, time_range):
         return chunks
 
 
-def get_range_needed(start_request, end_request, start_cache, end_cache, staleness_threshold=10):
+def get_range_needed(start_request,
+                     end_request,
+                     start_cache,
+                     end_cache,
+                     staleness_threshold=10,
+                     window_size=False):
     """ What range of data should be proxied to KairosDB?
         start_request: datetime, earliest data the user requested
         end_request: datetime, latest data the user requested
@@ -192,6 +197,13 @@ def get_range_needed(start_request, end_request, start_cache, end_cache, stalene
         # we have early data, but not all recent data. compare to staleness threshold.
         if (end_request - end_cache) < datetime.timedelta(seconds=staleness_threshold):
             return False
+
+        # special behavior to deal with aggregate windowing.
+        if window_size:
+            if end_request >= end_cache + window_size:
+                return (end_cache - window_size, end_request, FETCH_AFTER)
+            return False
+
         return (end_cache, end_request, FETCH_AFTER)
     elif not have_earliest and have_latest:
         # we have all recent data, but not earlier data

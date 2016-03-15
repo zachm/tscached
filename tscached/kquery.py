@@ -5,6 +5,7 @@ import threading
 
 from datacache import DataCache
 from utils import BackendQueryFailure
+from utils import get_timedelta
 from utils import query_kairos
 
 
@@ -13,6 +14,7 @@ class KQuery(DataCache):
     expiry = 10800  # three hours, matching Kairos
     query = None
     related_mts = None
+    window_size = False  # or datetime.timedelta of largest aggregator
 
     def __init__(self, redis_client):
         super(KQuery, self).__init__(redis_client, 'kquery')
@@ -30,6 +32,15 @@ class KQuery(DataCache):
             # Otherwise, partial windows (if aggregated) will appear on every seam in the data. Info:
             # https://kairosdb.github.io/docs/build/html/restapi/QueryMetrics.html#metric-properties
             for agg_ndx in xrange(len(new.query.get('aggregators', []))):
+                # Derive a maximum window size so we can merge more intelligently later.
+                sampling = new.query['aggregators'][agg_ndx].get('sampling')
+                if sampling:
+                    window_size = get_timedelta(sampling)
+                    if not new.window_size:
+                        new.window_size = window_size
+                    elif window_size > new.window_size:
+                        new.window_size = window_size
+
                 if 'align_sampling' in new.query['aggregators'][agg_ndx]:
                     del new.query['aggregators'][agg_ndx]['align_sampling']
                     new.query['aggregators'][agg_ndx]['align_start_time'] = True
@@ -44,11 +55,14 @@ class KQuery(DataCache):
             pipeline.get(key)
         results = pipeline.execute()
         for ctr in xrange(len(redis_keys)):
-            new = cls(redis_client)
-            new.redis_key = redis_keys[ctr]
-            new.query = new.process_cached_data(results[ctr])
-            new.cached_data = new.query  # emulating get_cached behavior
-            yield new
+            try:
+                new = cls(redis_client)
+                new.redis_key = redis_keys[ctr]
+                new.query = new.process_cached_data(results[ctr])
+                new.cached_data = new.query  # emulating get_cached behavior
+                yield new
+            except KeyError:
+                logging.error('KQuery no longer cached: %s' % redis_keys[ctr])
 
     def key_basis(self):
         """ We already remove the timestamps and store them separately. """
