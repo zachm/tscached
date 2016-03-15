@@ -23,10 +23,16 @@ def handle_root():
 
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
-    if request.method == 'POST':
-        payload = json.loads(request.data)  # dict
-    else:
-        payload = json.loads(request.args.get('query'))
+    try:
+        if request.method == 'POST':
+            payload = json.loads(request.data)  # dict
+        else:
+            payload = json.loads(request.args.get('query'))
+    except:
+        err = 'Cannot deserialize JSON payload.'
+        logging.error(err)
+        return json.dumps({'error': err}), 500
+
     config = app.config['tscached']
 
     logging.info('Query')
