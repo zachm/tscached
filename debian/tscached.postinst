@@ -1,0 +1,6 @@
+#!/bin/sh
+
+addgroup tscached || /bin/true
+adduser --system tscached || /bin/true
+mkdir -p /var/log/tscached
+chown tscached:tscached /var/log/tscached

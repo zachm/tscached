@@ -1,0 +1,5 @@
+tscached (0.0.1-1) unstable; urgency=medium
+
+  * Initial attempt at packaging
+
+ -- Zach Musgrave <ztm@zachm.us>  Thu, 10 Mar 2016 19:04:56 -0800

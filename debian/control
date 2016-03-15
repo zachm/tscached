@@ -1,0 +1,12 @@
+Source: tscached
+Section: python
+Priority: extra
+Maintainer: Zach Musgrave <ztm@zachm.us>
+Build-Depends: debhelper (>= 9), python, dh-virtualenv (>= 0.8), libyaml-dev, libpcre3-dev
+Standards-Version: 3.9.5
+
+Package: tscached
+Architecture: any
+Pre-Depends: dpkg (>= 1.16.1), python2.7, ${misc:Pre-Depends}, libyaml-0-2, libpcre3,
+Depends: ${python:Depends}, ${misc:Depends}
+Description: A smart caching proxy for time series data in the KairosDB format.
