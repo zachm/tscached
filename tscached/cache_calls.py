@@ -37,7 +37,7 @@ def process_cache_hit(config, redis_client, kquery, kairos_time_range):
     staleness_threshold = config['data']['staleness_threshold']
 
     range_needed = get_range_needed(start_request, end_request, start_cache,
-                                    end_cache, staleness_threshold)
+                                    end_cache, staleness_threshold, kquery.window_size)
     if not range_needed:  # hot cache
         return hot(redis_client, kquery, kairos_time_range)
     else:
@@ -83,6 +83,7 @@ def cold(config, redis_client, kquery, kairos_time_range):
     for mts in mts_lookup.values():
         kquery.add_mts(mts)
         pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
+        logging.debug('Cold writing MTS: %s' % mts.get_key())
         response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
 
     # Execute the MTS Redis pipeline, then set the KQuery to its full new value.
