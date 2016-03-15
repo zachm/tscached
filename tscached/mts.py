@@ -78,7 +78,7 @@ class MTS(DataCache):
                 return
 
             old_ts_at_offset = self.result['values'][reverse_offset][0]
-            if old_ts_at_offset < first_new_ts:
+            if old_ts_at_offset <= first_new_ts:
                 break
 
             if reverse_offset < cutoff * -1:
@@ -89,12 +89,13 @@ class MTS(DataCache):
         # last cached value is older than first new value
         # remove the last, first values. they're often incorrect due to partial windowing.
         # TODO? be more careful here? a 1m rollup can show missing data; a 10s rollup behaves well.
+
         if reverse_offset == -1:
-            self.result['values'] = self.result['values'][:-1] + new_mts.result['values'][1:]
+            self.result['values'] = self.result['values'] + new_mts.result['values']
         else:
             logging.debug('Sliced %d outdated values from end of cache: MTS %s' %
                           (reverse_offset, self.get_key()))
-            self.result['values'] = self.result['values'][:reverse_offset + 1] + new_mts.result['values'][1:]
+            self.result['values'] = self.result['values'][:reverse_offset] + new_mts.result['values']
 
     def merge_at_beginning(self, new_mts, cutoff=10):
         """ Append new_mts to the beginning of this one.
