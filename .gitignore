@@ -12,3 +12,6 @@ dist/*
 debug-run.py
 kairosdb/
 tscached/kairos-web/
+debian/tscached/
+debian/*.log
+debian/*.debhelper
