@@ -1,0 +1,2 @@
+misc:Depends=sysv-rc (>= 2.88dsf-24) | file-rc (>= 0.8.16)
+shlibs:Depends=libc6 (>= 2.16), libexpat1 (>= 2.0.1), libpcre3, libpython2.7 (>= 2.7), libyaml-0-2, zlib1g (>= 1:1.2.0)

@@ -15,7 +15,8 @@ from tscached.utils import populate_time_range
 
 @app.route('/', methods=['GET'])
 def handle_root():
-    if os.path.exists('tscached/kairos-web/index.html'):
+    dir_of_this_file = os.path.dirname(os.path.realpath(__file__))
+    if os.path.exists(dir_of_this_file + '/kairos-web/index.html'):
         return app.send_static_file('index.html')
     return ("Welcome to tscached! If you're looking for a web frontend, try running `make frontend`"
             " and restarting the server.")

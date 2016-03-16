@@ -9,7 +9,7 @@ import yaml
 from tscached.shadow import perform_readahead
 
 
-if __name__ == '__main__':
+def start():
     parser = argparse.ArgumentParser(description='Harness for querying/testing tscached/kairosdb')
 
     parser.add_argument('-c', '--config', type=str, default=os.path.abspath('tscached.yaml'),
@@ -21,3 +21,7 @@ if __name__ == '__main__':
 
     redis_client = redis.StrictRedis(host=config['redis']['host'], port=config['redis']['port'])
     perform_readahead(config, redis_client)
+
+
+if __name__ == '__main__':
+    start()

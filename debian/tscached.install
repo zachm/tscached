@@ -1,0 +1,3 @@
+tscached/kairos-web /usr/share/python/tscached/lib/python2.7/site-packages/tscached
+tscached.yaml /etc
+tscached.uwsgi.ini /etc
