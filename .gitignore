@@ -15,3 +15,4 @@ tscached/kairos-web/
 debian/tscached/
 debian/*.log
 debian/*.debhelper
+debian/files

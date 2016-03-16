@@ -2,14 +2,12 @@ description "tscached"
 author "ztm@zachm.us"
 start on runlevel [2345] and net-device-up IFACE!=lo
 stop on runlevel [!2345]
+setuid tscached
+setgid tscached
 respawn
-
-post-stop exec /bin/sleep 5
-
 
 script
 
-USER="tscached"
 CONFIG_FILE="/etc/tscached.yaml"
 WSGI_CONFIG_FILE="/etc/tscached.uwsgi.ini"
 LOG_FILE="/var/log/tscached/tscached.log"
@@ -18,11 +16,12 @@ if [ -e "/etc/default/tscached" ]; then
   . /etc/default/tscached
 fi
 
-sudo -u "$USER" /usr/share/python/tscached/bin/uwsgi \
+exec /usr/share/python/tscached/bin/uwsgi \
     -H /usr/share/python/tscached \
     --ini "$WSGI_CONFIG_FILE" \
     --logto2 "$LOG_FILE" \
+    --logfile-chmod 644 \
     --pyargv "tscached-config $CONFIG_FILE" \
-    --wsgi-file /usr/share/python/tscached/lib/python2.7/site-packages/tscached/uwsgi.py \
+    --wsgi-file /usr/share/python/tscached/lib/python2.7/site-packages/tscached/uwsgi.py
 
 end script

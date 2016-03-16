@@ -1,13 +1,16 @@
 # A very simple Makefile.
 # tscached is only tested against python 2.7 (newest at press time was 2.7.11)
-# It *might* be poked work with 2.6... but why are you still using 2.6?!?
+# It *might* be poked to work with 2.6... but you should stop using 2.6.
 # Feel free to change PYTHONEXEC if you need to.
 
 PYTHONEXEC=python2.7
 DEBUGPORT=8008
 
+
 # turns out 'source' isn't a thing in sh.
 SHELL=/usr/bin/env bash
+PACKAGE_VERSION=$(shell python setup.py --version 2>/dev/null)
+PACKAGE_DEBIAN_REVISION=1
 
 # builds the darn thing
 all: venv frontend
@@ -31,6 +34,7 @@ cover: devbuild
 clean:
 	rm -rf venv debug-run.py kairosdb/ tscached/kairos-web/
 	rm -rf build/ dist/ tscached.egg-info/ htmlcov/
+	rm -rf debian/tscached debian/*.debhelper debian/*.log
 	find . -name \*.pyc -delete
 
 # Run with uWSGI server, multiple workers, etc.
@@ -49,3 +53,11 @@ frontend: venv
 	cp logo/favicon.png tscached/kairos-web/img/favicon.png
 	cp logo/logo.png tscached/kairos-web/img/logo.png
 	cp logo/logo.png tscached/kairos-web/img/logoSmall.png
+
+# build me a deb
+package: frontend
+	dpkg-buildpackage -us -uc
+
+# changelog stuff
+changelog:
+	dch -D trusty -u low -i
