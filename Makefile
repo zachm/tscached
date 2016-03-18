@@ -47,7 +47,7 @@ debug: venv frontend
 	source venv/bin/activate; venv/bin/python debug-run.py
 
 # Copy the debug frontend from kairosdb into our project
-frontend: venv
+frontend:
 	test -d kairosdb || git clone https://github.com/kairosdb/kairosdb.git
 	test -d tscached/kairos-web || cp -R kairosdb/webroot tscached/kairos-web
 	cp logo/favicon.png tscached/kairos-web/img/favicon.png
