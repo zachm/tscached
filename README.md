@@ -10,6 +10,9 @@ step further: A previously issued query will be reissued across only the elapsed
 last execution. In brief, this is a read-through, append-optimized, nominally consistent time
 series cache.
 
+There are several different frontends to use with a Kairos-compliant API like this one, but the most full-featured remains (as always) [Grafana](http://grafana.org/) with [this plugin](https://github.com/grafana/kairosdb-datasource) installed.
+
+
 Everything that follows is something of a fluid design document.
 
 ## Stored Data
