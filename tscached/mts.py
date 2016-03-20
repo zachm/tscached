@@ -57,6 +57,10 @@ class MTS(DataCache):
             The second threshold (gc_expiry) prevents frequent (and expensive!) list slicing.
             :return: False if no change; datetime.datetime of new beginning otherwise.
         """
+        if len(self.result['values']) == 0:
+            logging.error('ttl_expire: MTS contained no data points! ' + self.get_key())
+            return False
+
         first_value_dt = datetime.datetime.fromtimestamp(self.result['values'][0][0] / 1000)
         gc_expiry_dt = datetime.datetime.now() - datetime.timedelta(seconds=self.gc_expiry)
         if first_value_dt < gc_expiry_dt:
@@ -69,6 +73,12 @@ class MTS(DataCache):
     def merge_at_end(self, new_mts, cutoff=10):
         """ Append one MTS to the end of another. Remove up to cutoff values from end of cached MTS. """
         reverse_offset = -1
+
+        # an edge case that suggests corrupt data.
+        if len(new_mts.result['values']) == 0:
+            logging.error('merge_at_end: new MTS contained no data points! ' + self.get_key())
+            return
+
         first_new_ts = new_mts.result['values'][0][0]
         while True:
 
@@ -174,6 +184,11 @@ class MTS(DataCache):
 
     def conforms_to_efficient_constraints(self):
         """ Can we use the efficient trim strategy? returns boolean. """
+        if len(self.result['values']) == 0:
+            logging.error('conforms_to_efficient_constraints: MTS contained no data points! '
+                          + self.get_key())
+            return False
+
         first_ts = self.result['values'][0][0]
         last_ts = self.result['values'][-1][0]
         count = len(self.result['values'])
