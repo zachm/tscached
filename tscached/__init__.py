@@ -29,4 +29,5 @@ if not app.debug:
 
 
 import tscached.handler_general
+import tscached.handler_maintenance
 import tscached.handler_meta
