@@ -69,6 +69,12 @@ def cold(config, redis_client, kquery, kairos_time_range):
     ndx = len(results) - 1  # Results come out newest to eldest, so count backwards.
     while ndx >= 0:
         for mts in MTS.from_result(results[ndx]['queries'][0], redis_client):
+
+            # Almost certainly a null result. Empty data should not be included in mts_lookup.
+            if len(mts.result['values']) == 0:
+                logging.debug('cache_calls.cold: got an empty chunked mts response')
+                continue
+
             if not mts_lookup.get(mts.get_key()):
                 mts_lookup[mts.get_key()] = mts
             else:
@@ -85,6 +91,13 @@ def cold(config, redis_client, kquery, kairos_time_range):
         pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
         logging.debug('Cold writing MTS: %s' % mts.get_key())
         response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
+
+    # Handle a fully empty set of MTS. Bail out before we upsert.
+    if len(mts_lookup) == 0:
+        kquery.query['values'] = []
+        response_kquery['results'].append(kquery.query)
+        logging.info('Received probable incorrect query; no results. Not caching!')
+        return response_kquery
 
     # Execute the MTS Redis pipeline, then set the KQuery to its full new value.
     try:
