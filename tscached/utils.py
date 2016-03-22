@@ -9,6 +9,7 @@ import simplejson as json
 
 # note: this doesn't work perfectly for months (31 days) or years (365 days)
 SECONDS_IN_UNIT = {
+                   'milliseconds': 0.001,
                    'seconds': 1,
                    'minutes': 60,
                    'hours': 3600,
