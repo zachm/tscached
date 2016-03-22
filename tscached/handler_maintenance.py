@@ -23,7 +23,7 @@ def handle_flushall():
         # Amusingly, we don't need to release the lock. It's implicit by virtue of deleting everything!
         lock = shadow.become_leader(config, redis_client)
         if lock:
-            logging.info ('Flushall acquired shadow lock')
+            logging.info('Flushall acquired shadow lock')
             redis_client = redis.StrictRedis(host=config['redis']['host'], port=config['redis']['port'])
             ret = redis_client.flushall()
             message = 'Redis FLUSHALL executed; received response: %s' % ret

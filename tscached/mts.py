@@ -185,8 +185,8 @@ class MTS(DataCache):
     def conforms_to_efficient_constraints(self):
         """ Can we use the efficient trim strategy? returns boolean. """
         if len(self.result['values']) == 0:
-            logging.error('conforms_to_efficient_constraints: MTS contained no data points! '
-                          + self.get_key())
+            logging.error('conforms_to_efficient_constraints: MTS contained no data points! ' +
+                          self.get_key())
             return False
 
         first_ts = self.result['values'][0][0]
