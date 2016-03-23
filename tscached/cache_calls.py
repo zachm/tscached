@@ -71,7 +71,7 @@ def cold(config, redis_client, kquery, kairos_time_range):
         for mts in MTS.from_result(results[ndx]['queries'][0], redis_client):
 
             # Almost certainly a null result. Empty data should not be included in mts_lookup.
-            if len(mts.result['values']) == 0:
+            if not mts.result or len(mts.result['values']) == 0:
                 logging.debug('cache_calls.cold: got an empty chunked mts response')
                 continue
 
@@ -116,11 +116,16 @@ def cold(config, redis_client, kquery, kairos_time_range):
 
 
 def hot(redis_client, kquery, kairos_time_range):
-    # Hot / Hit
+    """ Hot / Hit """
     logging.info("KQuery is HOT")
     response_kquery = {'results': [], 'sample_size': 0}
     for mts in MTS.from_cache(kquery.cached_data.get('mts_keys', []), redis_client):
         response_kquery = mts.build_response(kairos_time_range, response_kquery)
+
+    # Handle a fully empty set of MTS: hand back the expected query with no values.
+    if len(response_kquery['results']) == 0:
+        kquery.query['values'] = []
+        response_kquery['results'].append(kquery.query)
     return response_kquery
 
 

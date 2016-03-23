@@ -37,7 +37,8 @@ class MTS(DataCache):
             new = cls(redis_client)
             new.redis_key = redis_keys[ctr]
             new.result = new.process_cached_data(results[ctr])
-            yield new
+            if isinstance(new.result.get('values'), list):
+                yield new
 
     def key_basis(self):
         mts_key_dict = {}
@@ -57,8 +58,8 @@ class MTS(DataCache):
             The second threshold (gc_expiry) prevents frequent (and expensive!) list slicing.
             :return: False if no change; datetime.datetime of new beginning otherwise.
         """
-        if len(self.result['values']) == 0:
-            logging.error('ttl_expire: MTS contained no data points! ' + self.get_key())
+        if not self.result or len(self.result['values']) == 0:
+            logging.error('ttl_expire: MTS None, or contained no data points! ' + self.get_key())
             return False
 
         first_value_dt = datetime.datetime.fromtimestamp(self.result['values'][0][0] / 1000)
@@ -75,8 +76,8 @@ class MTS(DataCache):
         reverse_offset = -1
 
         # an edge case that suggests corrupt data.
-        if len(new_mts.result['values']) == 0:
-            logging.error('merge_at_end: new MTS contained no data points! ' + self.get_key())
+        if not self.result or len(self.result['values']) == 0:
+            logging.error('merge_at_end: new MTS is None, or contained no data! ' + self.get_key())
             return
 
         first_new_ts = new_mts.result['values'][0][0]
@@ -184,8 +185,9 @@ class MTS(DataCache):
 
     def conforms_to_efficient_constraints(self):
         """ Can we use the efficient trim strategy? returns boolean. """
-        if len(self.result['values']) == 0:
-            logging.error('conforms_to_efficient_constraints: MTS contained no data points! ' +
+
+        if not self.result or len(self.result['values']) == 0:
+            logging.error('conforms_to_efficient_constraints: MTS None, or contained no data points: ' +
                           self.get_key())
             return False
 
@@ -209,6 +211,11 @@ class MTS(DataCache):
             :param trim: bool, to trim or not to trim.
             :return: an updated response_dict.
         """
+
+        # Short circuit if we are an invalid MTS object.
+        if not self.result or len(self.result['values']) == 0:
+            return response_dict
+
         new_values = None
         if trim:
             start_trim, end_trim = get_needed_absolute_time_range(kairos_time_range)
