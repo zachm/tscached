@@ -60,4 +60,4 @@ package: frontend
 
 # changelog stuff
 changelog:
-	dch -D trusty -u low -i
+	dch -D trusty -u low -v ${PACKAGE_VERSION}-1

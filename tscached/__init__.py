@@ -7,6 +7,8 @@ import yaml
 from tscached.utils import setup_logging
 
 
+VERSION = '0.1.1'
+
 app = Flask(__name__, static_url_path='', static_folder='kairos-web')
 
 # Inject our custom YAML-based config into the Flask app.

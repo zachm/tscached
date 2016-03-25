@@ -6,9 +6,12 @@ from __future__ import unicode_literals
 from setuptools import find_packages
 from setuptools import setup
 
+from tscached import VERSION
+
+
 setup(
     name='tscached',
-    version='0.1.0',
+    version=VERSION,
 
     description='Caching proxy for time series data',
     long_description='Advanced caching proxy for KairosDB, using Redis as a datastore.',
