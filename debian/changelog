@@ -1,3 +1,9 @@
+tscached (0.1.1-1) trusty; urgency=low
+
+  * Bug fix for merging, with a masking approach
+
+ -- Zachary Musgrave <ztm@yelp.com>  Fri, 25 Mar 2016 13:15:41 -0700
+
 tscached (0.1.0-1) trusty; urgency=low
 
   * Several fixed bugs, somewhat battle tested now.
