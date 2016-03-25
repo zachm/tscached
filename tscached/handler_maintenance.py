@@ -4,6 +4,7 @@ from flask import request
 import redis
 import simplejson as json
 
+from tscached import VERSION
 from tscached import app
 from tscached import shadow
 
@@ -33,3 +34,8 @@ def handle_flushall():
         message = 'Cowardly refusing to act, add orly=yarly to execute Redis FLUSHALL.'
 
     return json.dumps({'message': message}), 200
+
+
+@app.route('/version', methods=['GET'])
+def handle_version():
+    return VERSION, 200
