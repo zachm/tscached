@@ -68,7 +68,7 @@ def cold(config, redis_client, kquery, kairos_time_range):
     mts_lookup = {}
     ndx = len(results) - 1  # Results come out newest to eldest, so count backwards.
     while ndx >= 0:
-        for mts in MTS.from_result(results[ndx]['queries'][0], redis_client):
+        for mts in MTS.from_result(results[ndx]['queries'][0], redis_client, kquery):
 
             # Almost certainly a null result. Empty data should not be included in mts_lookup.
             if not mts.result or len(mts.result['values']) == 0:
@@ -89,7 +89,7 @@ def cold(config, redis_client, kquery, kairos_time_range):
     for mts in mts_lookup.values():
         kquery.add_mts(mts)
         pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)
-        logging.debug('Cold writing MTS: %s' % mts.get_key())
+        logging.debug('Cold: Writing %d points to MTS: %s' % (len(mts.result['values']), mts.get_key()))
         response_kquery = mts.build_response(kairos_time_range, response_kquery, trim=False)
 
     # Handle a fully empty set of MTS. Bail out before we upsert.
@@ -165,9 +165,9 @@ def warm(config, redis_client, kquery, kairos_time_range, range_needed):
 
     # loop over newly returned MTS. if they already existed, merge/write. if not, just write.
     pipeline = redis_client.pipeline()
-    for mts in MTS.from_result(new_kairos_result['queries'][0], redis_client):
-
+    for mts in MTS.from_result(new_kairos_result['queries'][0], redis_client, kquery):
         old_mts = cached_mts.get(mts.get_key())
+
         if not old_mts:  # This MTS just started reporting and isn't yet in the cache (cold behavior).
             kquery.add_mts(mts)
             pipeline.set(mts.get_key(), json.dumps(mts.result), ex=mts.expiry)

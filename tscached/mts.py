@@ -11,6 +11,7 @@ class MTS(DataCache):
     def __init__(self, redis_client):
         super(MTS, self).__init__(redis_client, 'mts')
         self.result = None
+        self.query_mask = {}
 
         # TODO make these configurable
         self.gc_expiry = 12600  # three and a half hours
@@ -19,11 +20,12 @@ class MTS(DataCache):
         self.expected_resolution = 10000  # in ms
 
     @classmethod
-    def from_result(cls, results, redis_client):
+    def from_result(cls, results, redis_client, kquery):
         # includes everything except sample_size, which we'll recalculate later
         for result in results['results']:
             new = cls(redis_client)
             new.result = result
+            new.query_mask = kquery.query
             yield new
 
     @classmethod
@@ -35,14 +37,15 @@ class MTS(DataCache):
 
         for ctr in xrange(len(redis_keys)):
             new = cls(redis_client)
-            new.redis_key = redis_keys[ctr]
+            new.redis_key = redis_keys[ctr]  # this must not be recalculated, due to masking
             new.result = new.process_cached_data(results[ctr])
             if isinstance(new.result.get('values'), list):
                 yield new
 
     def key_basis(self):
         mts_key_dict = {}
-        mts_key_dict['tags'] = self.result['tags']
+        mts_key_dict['tags'] = self.query_mask.get('tags', {})
+
         if self.result.get('group_by'):
             mts_key_dict['group_by'] = self.result['group_by']
         if self.result.get('aggregators'):

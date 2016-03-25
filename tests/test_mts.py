@@ -7,6 +7,7 @@ import mock
 import simplejson as json
 
 from testing.mock_redis import MockRedis
+from tscached.kquery import KQuery
 from tscached.mts import MTS
 
 
@@ -31,7 +32,9 @@ def test_from_result():
     """ Test from_result """
     redis_cli = MockRedis()
     results = {'results': [{'wubba-lubba': 'dub-dub'}, {'thats-the-way': 'the-news-goes'}]}
-    ret_vals = MTS.from_result(results, redis_cli)
+    kq = KQuery(redis_cli)
+    kq.query = 'wat'
+    ret_vals = MTS.from_result(results, redis_cli, kq)
     assert isinstance(ret_vals, GeneratorType)
     ctr = 0
     for mts in ret_vals:
@@ -39,6 +42,7 @@ def test_from_result():
         assert mts.result == results['results'][ctr]
         assert mts.expiry == 10800
         assert mts.cache_type == 'mts'
+        assert mts.query_mask == 'wat'
         ctr += 1
     assert redis_cli.set_call_count == 0 and redis_cli.get_call_count == 0
 
@@ -60,19 +64,35 @@ def test_from_cache():
 
 
 def test_key_basis_simple():
-    """ simple case """
+    """ simple case - requesting one specific MTS, since mask is perfectly equivalent."""
     mts = MTS(MockRedis())
+    mts.query_mask = MTS_CARDINALITY
     mts.result = MTS_CARDINALITY
     assert mts.key_basis() == MTS_CARDINALITY
 
 
 def test_key_basis_removes_bad_data():
-    """ should remove data not explicitly included """
+    """ should remove data not in tags, group_by, aggregators, name. see below for query masking."""
     mts = MTS(MockRedis())
     cardinality_with_bad_data = copy.deepcopy(MTS_CARDINALITY)
+    cardinality_with_bad_data = copy.deepcopy(MTS_CARDINALITY)
     cardinality_with_bad_data['something-irrelevant'] = 'whatever'
+
+    mts.query_mask = MTS_CARDINALITY
     mts.result = cardinality_with_bad_data
     assert mts.key_basis() == MTS_CARDINALITY
+
+
+def test_key_basis_does_query_masking():
+    """ we only set ecosystem in KQuery, so must remove hostname list when calculating hash.
+        otherwise, if the hostname list ever changes (and it will!) the merge will not happen correctly.
+    """
+    mts = MTS(MockRedis())
+    mts.query_mask = {'tags': {'ecosystem': ['dev']}}
+    mts.result = MTS_CARDINALITY
+    basis = mts.key_basis()
+    assert 'ecosystem' in basis['tags']
+    assert 'hostname' not in basis['tags']
 
 
 def test_key_basis_no_unset_keys():
@@ -81,6 +101,7 @@ def test_key_basis_no_unset_keys():
     mts_cardinality = copy.deepcopy(MTS_CARDINALITY)
     del mts_cardinality['group_by']
     mts.result = mts_cardinality
+    mts.query_mask = mts_cardinality
     assert mts.key_basis() == mts_cardinality
     assert 'group_by' not in mts.key_basis().keys()
 
