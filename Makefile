@@ -4,13 +4,12 @@
 # Feel free to change PYTHONEXEC if you need to.
 
 PYTHONEXEC=python2.7
-DEBUGPORT=8008
+PORT=8008
 
 
-# turns out 'source' isn't a thing in sh.
 SHELL=/usr/bin/env bash
-PACKAGE_VERSION=$(shell python setup.py --version 2>/dev/null)
-PACKAGE_DEBIAN_REVISION=1
+VERSION_BASH=$(shell bash -c "cat tscached/__init__.py | grep VERSION | sed 's/VERSION = //g' | sed \"s/'//g\"")
+VERSION_PYTHON=$(shell python setup.py --version 2>/dev/null)
 
 # builds the darn thing
 all: venv frontend
@@ -43,7 +42,7 @@ run: venv frontend
 
 # Run with single-threaded debug server. Flask gives you auto-reloading on code changes for free.
 debug: venv frontend
-	echo "from tscached import app; app.debug = True; app.run(host='0.0.0.0', port=${DEBUGPORT})" > debug-run.py
+	echo "from tscached import app; app.debug = True; app.run(host='0.0.0.0', port=${PORT})" > debug-run.py
 	source venv/bin/activate; venv/bin/python debug-run.py
 
 # Copy the debug frontend from kairosdb into our project
@@ -60,4 +59,12 @@ package: frontend
 
 # changelog stuff
 changelog:
-	dch -D trusty -u low -v ${PACKAGE_VERSION}-1
+	dch -D trusty -u low -v ${VERSION_PYTHON}-1
+
+.PHONY: docker_build
+docker_build:
+	docker build -t tscached_v${VERSION_BASH} .
+
+.PHONY: docker_run
+docker_run: docker_build
+	docker run -p 0.0.0.0:${PORT}:8008 -t tscached_v${VERSION_BASH}
