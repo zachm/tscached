@@ -10,3 +10,6 @@ step further: *A previously issued query will be reissued across only the elapse
 last execution.* This provides a substantial improvement in serving high-volume load, especially temporally long queries that return thousands of time series. Using only simple techniques - consistent hashing, read-through caching, and backend load chunking - we provide user-perceived read latency improvements of up to 100x.
 
 There are several different frontends to use with a Kairos-compliant API like this one, but the most full-featured remains (as always) [Grafana](http://grafana.org/) with [this plugin](https://github.com/grafana/kairosdb-datasource) installed.
+
+## Design Docs
+They may be out of date with the current release, although likely not by much: [DESIGN.md](https://github.com/zachm/tscached/blob/master/DESIGN.md).
