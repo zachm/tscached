@@ -1,4 +1,7 @@
 #!/usr/bin/make -f
 
+SHELL=/usr/bin/env bash
+PYTHON_EXEC=$(shell which python2.7)
+
 %:
-	dh $@ --with python-virtualenv
+	dh $@ --with python-virtualenv --python ${PYTHON_EXEC}
