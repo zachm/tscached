@@ -21,7 +21,10 @@ class DataCache(object):
         return self.cached_data
 
     def process_cached_data(self, result):
-        """ Abstracted from get_cached because of pipelining. """
+        """ Abstracted from get_cached because of pipelining. Does JSON loading and not much else.
+            :param result: str, data from cache.
+            :return: object loaded from JSON (usually dict) or False, if the cache missed.
+        """
         if result:
             logging.debug('Cache HIT: %s' % self.redis_key)
             return json.loads(result)

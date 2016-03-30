@@ -60,7 +60,8 @@ class KQuery(DataCache):
                 new.redis_key = redis_keys[ctr]
                 new.query = new.process_cached_data(results[ctr])
                 new.cached_data = new.query  # emulating get_cached behavior
-                yield new
+                if new.query:
+                    yield new
             except KeyError:
                 logging.error('KQuery no longer cached: %s' % redis_keys[ctr])
 

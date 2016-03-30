@@ -39,7 +39,7 @@ class MTS(DataCache):
             new = cls(redis_client)
             new.redis_key = redis_keys[ctr]  # this must not be recalculated, due to masking
             new.result = new.process_cached_data(results[ctr])
-            if isinstance(new.result.get('values'), list):
+            if new.result and isinstance(new.result.get('values'), list):
                 yield new
 
     def key_basis(self):
@@ -78,8 +78,11 @@ class MTS(DataCache):
         """ Append one MTS to the end of another. Remove up to cutoff values from end of cached MTS. """
         reverse_offset = -1
 
-        # an edge case that suggests corrupt data.
+        # two edge cases that suggest corrupt data.
         if not self.result or len(self.result['values']) == 0:
+            logging.error('merge_at_end: current MTS is None, or contained no data! ' + self.get_key())
+            return
+        if not new_mts.result or len(new_mts.result['values']) == 0:
             logging.error('merge_at_end: new MTS is None, or contained no data! ' + self.get_key())
             return
 
@@ -116,6 +119,12 @@ class MTS(DataCache):
             Remove up to cutoff values from beginning of cached MTS if they conflict.
             May raise IndexError if merge fails.
         """
+        # an edge case that suggests corrupt/missing data
+        if not new_mts.result or len(new_mts.result['values']) == 0:
+            logging.error('merge_at_beginning: new MTS is None, or contained no data! ' +
+                          self.get_key())
+            return
+
         forward_offset = 0
         last_new_ts = new_mts.result['values'][-1][0]
         while True:
