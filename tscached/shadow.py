@@ -17,12 +17,15 @@ SHADOW_LIST = 'tscached:shadow_list'
 def should_add_to_readahead(config, referrer, headers):
     """ Should we add this KQuery for readahead behavior?
         :param config: dict representing the top-level tscached config
-        :param referrer: str, from the http request
+        :param referrer: None or str, from the http request
         :param headers: dict, all headers from the http request
         :return: boolean
     """
     if headers.get(config['shadow']['http_header_name'], None):
         return True
+
+    if not referrer:
+        return False
 
     for substr in config['shadow']['referrer_blacklist']:
         if substr in referrer:
