@@ -127,7 +127,8 @@ def perform_readahead(config, redis_client):
 
             # all that really matters is that end_ values are unset.
             kairos_time_range = {'start_relative': {'unit': 'minutes', 'value': str(mins_in_past)}}
-            kq_resp = cache_calls.process_cache_hit(config, redis_client, kq, kairos_time_range)
+            # throw away the diagnostic mode info for the moment.
+            kq_resp, _ = cache_calls.process_cache_hit(config, redis_client, kq, kairos_time_range)
             size = kq_resp.get('sample_size', -1)
             logging.debug('Processed KQuery %s; sample size now at %d' % (kq.redis_key, size))
     except BackendQueryFailure as e:

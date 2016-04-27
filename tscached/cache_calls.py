@@ -21,7 +21,7 @@ def process_cache_hit(config, redis_client, kquery, kairos_time_range):
         :param redis_client: redis.StrictRedis
         :param kquery: kquery.KQuery object
         :param kairos_time_range: dict, time range straight from the HTTP request payload
-        :return: dict, kquery response to be added to HTTP response
+        :return: 2-tuple: (dict: kquery resp to be added to HTTP resp, str: type of cache operation)
         :raise: utils.BackendQueryFailure, if a Kairos lookup failed.
     """
     # this relies on KQuery.get_cached() having a side effect. it must be called before this function.
@@ -39,14 +39,15 @@ def process_cache_hit(config, redis_client, kquery, kairos_time_range):
     range_needed = get_range_needed(start_request, end_request, start_cache,
                                     end_cache, staleness_threshold, kquery.window_size)
     if not range_needed:  # hot cache
-        return hot(redis_client, kquery, kairos_time_range)
+        return hot(redis_client, kquery, kairos_time_range), 'hot'
     else:
         merge_method = range_needed[2]
         if merge_method == FETCH_ALL:  # warm, but data doesn't support merging.
             logging.info('Odd COLD scenario: data exists.')
-            return cold(config, redis_client, kquery, kairos_time_range)
+            return cold(config, redis_client, kquery, kairos_time_range), 'cold_overwrite'
         elif merge_method in [FETCH_BEFORE, FETCH_AFTER]:  # warm, merging supported.
-            return warm(config, redis_client, kquery, kairos_time_range, range_needed)
+            mode = 'warm_' + merge_method
+            return warm(config, redis_client, kquery, kairos_time_range, range_needed), mode
         else:
             raise BackendQueryFailure("Received unsupported range_needed value: %s" % range_needed[2])
 

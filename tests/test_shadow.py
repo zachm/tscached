@@ -149,7 +149,7 @@ def test_perform_readahead_happy_path(m_process, m_from_cache, m_release_leader,
                           'redis_key': 'tscached:kquery:' + str(ndx)}
         kqueries.append(kq)
     m_from_cache.return_value = kqueries
-    m_process.return_value = {'sample_size': 666}
+    m_process.return_value = {'sample_size': 666}, 'warm_append'
 
     assert perform_readahead({}, redis_cli) is None
     assert m_become_leader.call_count == 1
