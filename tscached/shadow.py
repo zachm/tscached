@@ -17,12 +17,15 @@ SHADOW_LIST = 'tscached:shadow_list'
 def should_add_to_readahead(config, referrer, headers):
     """ Should we add this KQuery for readahead behavior?
         :param config: dict representing the top-level tscached config
-        :param referrer: str, from the http request
+        :param referrer: None or str, from the http request
         :param headers: dict, all headers from the http request
         :return: boolean
     """
     if headers.get(config['shadow']['http_header_name'], None):
         return True
+
+    if not referrer:
+        return False
 
     for substr in config['shadow']['referrer_blacklist']:
         if substr in referrer:
@@ -127,7 +130,8 @@ def perform_readahead(config, redis_client):
 
             # all that really matters is that end_ values are unset.
             kairos_time_range = {'start_relative': {'unit': 'minutes', 'value': str(mins_in_past)}}
-            kq_resp = cache_calls.process_cache_hit(config, redis_client, kq, kairos_time_range)
+            # throw away the diagnostic mode info for the moment.
+            kq_resp, _ = cache_calls.process_cache_hit(config, redis_client, kq, kairos_time_range)
             size = kq_resp.get('sample_size', -1)
             logging.debug('Processed KQuery %s; sample size now at %d' % (kq.redis_key, size))
     except BackendQueryFailure as e:
