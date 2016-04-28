@@ -2,6 +2,7 @@
 import argparse
 import datetime
 import os
+import time
 
 import requests
 import simplejson as json
@@ -32,12 +33,12 @@ def prettyprint_ts(ts, micro=True):
 def query_with_get(url, query):
     r = requests.get(url, params={'query': json.dumps(query)})
     print r.url
-    return json.loads(r.text)
+    return json.loads(r.text), r.headers.get('X-tscached-mode', 'no_mode')
 
 
 def query_with_post(url, query):
     r = requests.post(url, data=json.dumps(query))
-    return json.loads(r.text)
+    return json.loads(r.text), r.headers.get('X-tscached-mode', 'no_mode')
 
 
 def summarize_results(query, results):
@@ -78,6 +79,9 @@ if __name__ == '__main__':
                         help='Run a summarize routine instead of barfing JSON.')
     parser.add_argument('--request', type=str, default='testing/example_data/simple_query_request.json',
                         help='Use a different query, specify as JSON-formatted file.')
+    parser.add_argument('--benchmark', action='store_true', default=False,
+                        help='Generate benchmark data: time of req., obs. duration, mode, sample size')
+    parser.add_argument('--repeat', type=float, default=None, help='Re-run the query every _ seconds')
     args = parser.parse_args()
 
     request = load_example_data(args.request)
@@ -87,12 +91,25 @@ if __name__ == '__main__':
         url = 'http://%s:%d/api/v1/datapoints/query/tags' % (args.server, args.port)
     else:
         url = 'http://%s:%d/api/v1/datapoints/query' % (args.server, args.port)
-    if args.verb == 'POST':
-        results = query_with_post(url, request)
-    else:
-        results = query_with_get(url, request)
 
-    if not args.analysis:
-        print json.dumps(results)
-    else:
-        summarize_results(request, request)
+    initial_time = time.time()
+    while True:
+        start_time = time.time()
+        if args.verb == 'POST':
+            results, mode = query_with_post(url, request)
+        else:
+            results, mode = query_with_get(url, request)
+
+        duration = time.time() - start_time
+        if args.benchmark:
+            exec_offset = start_time - initial_time
+            data = ["%.4f" % exec_offset, "%.4f" % duration, mode, results['queries'][0]['sample_size']]
+            print ','.join([str(x) for x in data])
+        elif args.analysis:
+            summarize_results(request, results, duration)
+        else:
+            print json.dumps(results)
+
+        if not args.repeat:
+            break
+        time.sleep(args.repeat)
