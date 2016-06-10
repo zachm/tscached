@@ -73,4 +73,4 @@ def handle_query():
         elif cache_mode != overall_cache_mode:
             overall_cache_mode = 'mixed'
 
-    return json.dumps(ret_data), 200, {'X-tscached-mode': overall_cache_mode}
+    return json.dumps(ret_data), 200, {'Content-Type': 'application/json', 'X-tscached-mode': overall_cache_mode}
