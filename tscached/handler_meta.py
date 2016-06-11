@@ -73,7 +73,7 @@ def metadata_caching(config, name, endpoint, post_data=None):
                 # Eat the Redis exception - turns these endpoints into straight proxies.
                 logging.error('RedisError: ' + e.message)
 
-        return kairos_result.text, kairos_result.status_code
+        return kairos_result.text, kairos_result.status_code, {'Content-Type': 'application/json'}
 
 
 @app.route('/api/v1/metricnames', methods=['GET'])
