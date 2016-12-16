@@ -64,7 +64,8 @@ make debug
 ### Within a Container
 If you're into Docker, the included Dockerfile is pretty self-explanatory.
 ```bash
-$ docker run -d -p 8008:8008--name=tscached .
+$ docker build -t tscached .
+$ docker run -d -p 8008:8008 --name=tscached tscached
 ```
 
 ### As a Debian Package
