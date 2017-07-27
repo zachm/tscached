@@ -1,2 +1,2 @@
-misc:Depends=sysv-rc (>= 2.88dsf-24) | file-rc (>= 0.8.16)
-shlibs:Depends=libc6 (>= 2.16), libexpat1 (>= 2.0.1), libpcre3, libpython2.7 (>= 2.7), libyaml-0-2, zlib1g (>= 1:1.2.0)
+misc:Depends=upstart-job
+shlibs:Depends=libc6 (>= 2.15), libcap2 (>= 2.10), libpcre3 (>= 8.10), libpython2.7 (>= 2.7), libssl1.0.0 (>= 1.0.0), libuuid1 (>= 2.16), libxml2 (>= 2.7.4), libyaml-0-2, zlib1g (>= 1:1.2.0)

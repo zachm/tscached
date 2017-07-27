@@ -16,12 +16,12 @@ if [ -e "/etc/default/tscached" ]; then
   . /etc/default/tscached
 fi
 
-exec /usr/share/python/tscached/bin/uwsgi \
-    -H /usr/share/python/tscached \
+exec /opt/venvs/tscached/bin/uwsgi \
+    -H /opt/venvs/tscached \
     --ini "$WSGI_CONFIG_FILE" \
     --logto2 "$LOG_FILE" \
     --logfile-chmod 644 \
     --pyargv "tscached-config $CONFIG_FILE" \
-    --wsgi-file /usr/share/python/tscached/lib/python2.7/site-packages/tscached/uwsgi.py
+    --wsgi-file /opt/venvs/tscached/lib/python2.7/site-packages/tscached/uwsgi.py
 
 end script

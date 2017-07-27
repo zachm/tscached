@@ -5,4 +5,4 @@ redis==2.10.5
 redlock==1.2.0
 requests==2.9.1
 simplejson==3.8.1
-uWSGI==2.0.12
+uWSGI==2.0.15
