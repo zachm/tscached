@@ -1,3 +1,9 @@
+tscached (0.1.4-1) trusty; urgency=low
+
+  * Add /api/v1/health/check for grafana 4 compatibility
+
+ -- Zachary Musgrave <ztm@yelp.com>  Thu, 27 Jul 2017 15:39:20 -0700
+
 tscached (0.1.3-1) trusty; urgency=low
 
   * Add X-tscached-mode response header
