@@ -1,3 +1,11 @@
+tscached (0.1.5-1) trusty; urgency=low
+
+  * Drop libssl0.9.8
+  * Upgrade uWSGI to 2.0.15
+  * Move dh-virtualenv install prefix to /opt/venvs/
+
+ -- Zachary Musgrave <ztm@yelp.com>  Thu, 27 Jul 2017 16:54:43 -0700
+
 tscached (0.1.4-1) trusty; urgency=low
 
   * Add /api/v1/health/check for grafana 4 compatibility

@@ -7,7 +7,7 @@ import yaml
 from tscached.utils import setup_logging
 
 
-VERSION = '0.1.4'
+VERSION = '0.1.5'
 
 app = Flask(__name__, static_url_path='', static_folder='kairos-web')
 
