@@ -23,6 +23,12 @@ def handle_root():
             " and restarting the server.")
 
 
+@app.route('/api/v1/health/check', methods=['GET'])
+def handle_healthcheck():
+    """ kairosdb responds 204 No Content, so that's what we will do here. """
+    return ('', 204)
+
+
 @app.route('/api/v1/datapoints/query', methods=['POST', 'GET'])
 def handle_query():
     try:
